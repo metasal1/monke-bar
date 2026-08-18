@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: [
     "monke.bar",
+    "monke.sol.new",
     "*.trycloudflare.com",
     "*.metasal.xyz",
     "*.vercel.app",

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s · monke.bar",
   },
   description:
-    "Pixel Solana Monkey Business bar. Lookup SMB Gen2, Gen3, and Barrel by monke #, mint, wallet, or SNS (.sol). Floor, owner. Trade on Tensor + Magic Eden.",
+    "Pixel Solana Monkey Business bar. Lookup SMB Gen2, Gen3, and Barrel by monke #, mint, wallet, or SNS (.sol). Floor, owner. Trade on Tensor + Magic Eden. Backup: monke.sol.new.",
   metadataBase: new URL(SITE),
   applicationName: "monke.bar",
   keywords: [
@@ -38,6 +38,7 @@ export const metadata: Metadata = {
   creator: "Metasal",
   publisher: "Metasal",
   alternates: {
+    canonical: "https://monke.bar",
     types: {
       "text/plain": [{ url: "/llms.txt", title: "llms.txt" }],
     },

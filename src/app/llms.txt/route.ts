@@ -7,6 +7,7 @@ const BODY = `# monke.bar
 
 ## Site
 - Home: https://monke.bar/
+- Backup: https://monke.sol.new/
 - Metasal monke: https://monke.bar/gen3/12192
 - Full LLM notes: https://monke.bar/llms-full.txt
 

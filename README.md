@@ -33,3 +33,9 @@ Default falls back to the shared fast Helius endpoint used by other Milysec apps
 ## Deploy
 
 Vercel project → attach `monke.bar`. Preview via CF tunnel before PR.
+
+## Hosts
+
+- Primary: https://monke.bar
+- Backup: https://monke.sol.new
+- Worker: https://monke-bar.gm-4e8.workers.dev

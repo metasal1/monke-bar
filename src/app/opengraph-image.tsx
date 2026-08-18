@@ -11,6 +11,7 @@ async function loadPixelFont(): Promise<ArrayBuffer> {
   const bases = [
     "https://monke-bar.gm-4e8.workers.dev",
     "https://monke.bar",
+    "https://monke.sol.new",
     process.env.NEXT_PUBLIC_SITE_URL,
   ].filter(Boolean) as string[];
   for (const base of bases) {
