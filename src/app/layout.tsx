@@ -51,12 +51,21 @@ export const metadata: Metadata = {
     siteName: "monke.bar",
     type: "website",
     locale: "en_AU",
+    images: [
+      {
+        url: "/images/opengraph.png?v=2",
+        width: 1200,
+        height: 630,
+        alt: "THE MONKE BAR — monke.bar",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "monke.bar — THE MONKE BAR",
     description: "Solana monke NFT lookup · Gen2 Gen3 Barrel",
     creator: "@metasal",
+    images: ["/images/opengraph.png?v=2"],
   },
   robots: {
     index: true,
@@ -69,6 +78,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#0a0705",
   colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
 };
 
 const jsonLd = {

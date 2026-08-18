@@ -352,14 +352,18 @@ export default function LookupApp({
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="mb-4 flex gap-2">
+      <form onSubmit={onSubmit} className="search-bar mb-4 flex gap-2">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="# · mint · wallet · name.sol"
           spellCheck={false}
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-none border-2 border-border bg-wood px-4 py-3 text-pixel-sm text-foreground outline-none ring-banana/40 placeholder:text-muted focus:border-banana focus:ring-2"
+          autoCapitalize="none"
+          autoCorrect="off"
+          enterKeyHint="search"
+          inputMode="search"
+          className="min-w-0 flex-1 rounded-none border-2 border-border bg-wood px-4 py-3.5 text-[16px] leading-normal text-foreground outline-none ring-banana/40 placeholder:text-muted focus:border-banana focus:ring-2"
         />
         <button
           type="submit"

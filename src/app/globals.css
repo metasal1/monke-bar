@@ -162,9 +162,55 @@ li {
   text-shadow: 3px 3px 0 #000;
 }
 
+/* Mobile: never zoom inputs (iOS zooms if font-size < 16px) */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.03em;
+  min-height: 48px;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Keep placeholder readable while body stays 16px on fields */
 input::placeholder {
   font-family: var(--font-pixel), ui-monospace, monospace;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+  font-size: 14px;
+  opacity: 0.75;
+}
+
+/* 44px+ touch targets */
+button,
+a.pixel-btn,
+.pixel-btn {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+/* Safe area for notched phones */
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Slightly larger pixel base on tiny screens without shrinking inputs */
+@media (max-width: 480px) {
+  html {
+    font-size: 12px;
+  }
+  /* inputs stay 16px via rule above */
+  .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-bar button {
+    width: 100%;
+  }
 }
 
 ::selection {

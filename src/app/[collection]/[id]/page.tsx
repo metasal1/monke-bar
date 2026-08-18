@@ -5,6 +5,7 @@ import {
   type PathCollection,
 } from "@/lib/deeplink";
 import { COLLECTIONS } from "@/lib/collections";
+import { howrareByNumber } from "@/lib/howrare";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -16,15 +17,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "monke.bar" };
   }
   const col = PATH_TO_COLLECTION[collection];
-  const name = `${COLLECTIONS[col].numberPrefix} #${id}`;
+  const rarity = await howrareByNumber(col, Number(id));
+  const name =
+    rarity?.name || `${COLLECTIONS[col].numberPrefix} #${id}`;
+  const path = `/${collection}/${id}`;
+  const url = `https://monke.bar${path}`;
+  const desc = rarity?.rank
+    ? `${name} · HowRare #${rarity.rank} · open on monke.bar`
+    : `${name} on Solana Monkey Business · open on monke.bar`;
+
   return {
-    title: `${name} · monke.bar`,
-    description: `Lookup ${name} on Solana Monkey Business`,
+    title: name,
+    description: desc,
+    alternates: { canonical: url },
     openGraph: {
       title: `${name} · monke.bar`,
-      url: `https://monke.bar/${collection}/${id}`,
+      description: desc,
+      url,
+      siteName: "monke.bar",
+      type: "website",
+      // Dynamic opengraph-image.tsx on this segment; keep explicit deeplink url
     },
-    alternates: { canonical: `https://monke.bar/${collection}/${id}` },
+    twitter: {
+      card: "summary_large_image",
+      title: `${name} · monke.bar`,
+      description: desc,
+    },
   };
 }
 
