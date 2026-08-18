@@ -28,6 +28,9 @@ const BODY = `# monke.bar
 - Magic Eden floor stats
 - SNS (Bonfida)
 
+## Support
+- Donate $1 USDC per monke per year via Solana Pay slider on home
+
 ## Maker
 - https://metasal.xyz
 `;

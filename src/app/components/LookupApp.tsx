@@ -11,6 +11,7 @@ import {
   tensorItemUrl,
 } from "@/lib/markets";
 import { track } from "@/lib/analytics";
+import DonatePanel from "@/app/components/DonatePanel";
 
 type CollectionId = "smb_gen2" | "smb_gen3" | "smb_barrel" | "all";
 
@@ -604,6 +605,8 @@ export default function LookupApp({
           </ul>
         </section>
       )}
+
+      <DonatePanel />
 
       <footer className="mt-auto pt-12 text-center text-[10px] leading-relaxed text-muted">
         <p>
