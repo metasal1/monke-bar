@@ -1,3 +1,9 @@
+import {
+  ALL_COLLECTION_MINTS,
+  COLLECTIONS,
+  type MonkeCollectionId,
+} from "./collections";
+
 const DEFAULT_RPC =
   process.env.HELIUS_RPC_URL ||
   "https://viviyan-bkj12u-fast-mainnet.helius-rpc.com";
@@ -90,43 +96,105 @@ export async function getAsset(mint: string): Promise<NormalizedMonke | null> {
   return normalizeAsset(result);
 }
 
-export async function getAssetsByOwner(
+/**
+ * Search monkes owned by wallet, optionally scoped to one collection mint.
+ * Uses searchAssets (smaller) — getAssetsByOwner blows Helius size limits.
+ */
+export async function searchOwnerMonkes(
   owner: string,
-  page = 1,
-  limit = 100
-): Promise<{ items: NormalizedMonke[]; total: number }> {
-  const result = await heliusRpc<{ items?: DasAsset[]; total?: number }>(
-    "getAssetsByOwner",
-    {
+  collectionMint?: string
+): Promise<NormalizedMonke[]> {
+  const all: NormalizedMonke[] = [];
+  for (let page = 1; page <= 10; page++) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const params: Record<string, any> = {
       ownerAddress: owner,
       page,
-      limit,
+      limit: 200,
+      tokenType: "regularNft",
       displayOptions: {
-        showCollectionMetadata: true,
+        showCollectionMetadata: false,
       },
+    };
+    if (collectionMint) {
+      params.grouping = ["collection", collectionMint];
     }
-  );
-  const items = (result?.items || [])
-    .map(normalizeAsset)
-    .filter(Boolean) as NormalizedMonke[];
-  return { items, total: result?.total ?? items.length };
+    const result = await heliusRpc<{ items?: DasAsset[]; total?: number }>(
+      "searchAssets",
+      params
+    );
+    const items = (result?.items || [])
+      .map(normalizeAsset)
+      .filter(Boolean) as NormalizedMonke[];
+    all.push(...items);
+    if (items.length < 200) break;
+    if (result?.total != null && all.length >= result.total) break;
+  }
+  return all;
 }
 
-/** Keep monkes: SMB name pattern or known collection mints */
+/** Fetch monkes for wallet across one collection or all SMB collections */
+export async function getWalletMonkes(
+  owner: string,
+  collectionId: MonkeCollectionId | "all" = "all"
+): Promise<NormalizedMonke[]> {
+  if (collectionId !== "all") {
+    const mint = COLLECTIONS[collectionId].collectionMint;
+    const items = await searchOwnerMonkes(owner, mint);
+    return filterMonkes(items, { collectionId });
+  }
+
+  // Parallel per-collection searches (avoids huge unfiltered wallet dump)
+  const batches = await Promise.all(
+    ALL_COLLECTION_MINTS.map((m) => searchOwnerMonkes(owner, m))
+  );
+  const merged = batches.flat();
+  // dedupe by mint
+  const seen = new Set<string>();
+  const out: NormalizedMonke[] = [];
+  for (const m of merged) {
+    if (seen.has(m.mint)) continue;
+    seen.add(m.mint);
+    out.push(m);
+  }
+  return filterMonkes(out, { collectionId: "all" });
+}
+
+/** Keep monkes matching collection mint(s) and/or name patterns */
 export function filterMonkes(
   items: NormalizedMonke[],
-  collectionMints: string[] = []
+  opts?: {
+    collectionId?: MonkeCollectionId | "all";
+    collectionMints?: string[];
+  }
 ): NormalizedMonke[] {
-  const set = new Set(collectionMints.filter(Boolean));
+  const id = opts?.collectionId ?? "all";
+  const mints =
+    opts?.collectionMints ||
+    (id === "all"
+      ? ALL_COLLECTION_MINTS
+      : [COLLECTIONS[id].collectionMint]);
+  const set = new Set(mints.filter(Boolean));
+
   return items.filter((m) => {
     if (m.collectionMint && set.has(m.collectionMint)) return true;
-    const n = m.name.toLowerCase();
-    return (
-      /^smb\s*#?\d+/i.test(m.name) ||
-      n.includes("smb gen") ||
-      n.startsWith("smb ") ||
-      (n.includes("barrel") && n.includes("smb")) ||
-      /^monke\s*#?\d+/i.test(m.name)
-    );
+    if (id !== "all") {
+      return COLLECTIONS[id].namePattern.test(m.name);
+    }
+    return Object.values(COLLECTIONS).some((c) => c.namePattern.test(m.name));
   });
+}
+
+export function detectCollectionFromMonke(
+  m: NormalizedMonke
+): MonkeCollectionId | null {
+  if (m.collectionMint) {
+    for (const c of Object.values(COLLECTIONS)) {
+      if (c.collectionMint === m.collectionMint) return c.id;
+    }
+  }
+  for (const c of Object.values(COLLECTIONS)) {
+    if (c.namePattern.test(m.name)) return c.id;
+  }
+  return null;
 }

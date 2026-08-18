@@ -1,20 +1,27 @@
 import {
   COLLECTIONS,
-  SMB_GEN2_COLLECTION,
   isMintAddress,
+  parseCollectionHint,
   parseMonkeNumber,
   type MonkeCollectionId,
 } from "./collections";
 import {
-  filterMonkes,
+  detectCollectionFromMonke,
   getAsset,
-  getAssetsByOwner,
+  getWalletMonkes,
   type NormalizedMonke,
 } from "./helius";
-import { howrareByMint, howrareByNumber, type HowrareItem } from "./howrare";
+import {
+  collectionIdForMint,
+  howrareByMint,
+  howrareByNumber,
+  indexStats,
+  type HowrareItem,
+} from "./howrare";
 import { getMeFloor, type FloorStats } from "./magiceden";
+import { looksLikeSns, resolveSns } from "./sns";
 
-export type LookupKind = "mint" | "number" | "wallet" | "unknown";
+export type LookupKind = "mint" | "number" | "wallet" | "sns" | "unknown";
 
 export interface LookupResult {
   kind: LookupKind;
@@ -23,29 +30,68 @@ export interface LookupResult {
   monkes: NormalizedMonke[];
   rarity: HowrareItem | null;
   floor: FloorStats | null;
-  collectionId: MonkeCollectionId | null;
+  collectionId: MonkeCollectionId | "all" | null;
+  resolvedWallet?: string;
+  resolvedDomain?: string;
+  indexPartial?: boolean;
+  indexCount?: number;
   error?: string;
 }
 
-function detectKind(q: string): LookupKind {
-  const t = q.trim();
-  if (!t) return "unknown";
-  if (parseMonkeNumber(t) != null) return "number";
-  if (isMintAddress(t)) return "mint"; // mint vs wallet disambiguated later
-  return "unknown";
+function looksLikeSmb(monke: NormalizedMonke): boolean {
+  return detectCollectionFromMonke(monke) != null;
 }
 
-function looksLikeSmb(monke: NormalizedMonke): boolean {
-  if (monke.collectionMint === SMB_GEN2_COLLECTION) return true;
-  return /^smb\s*#?\d+/i.test(monke.name) || /monkey/i.test(monke.name);
+async function attachRarity(
+  monke: NormalizedMonke,
+  collectionId: MonkeCollectionId
+): Promise<HowrareItem | null> {
+  return (
+    (await howrareByMint(collectionId, monke.mint)) ||
+    (monke.number != null
+      ? await howrareByNumber(collectionId, monke.number)
+      : null)
+  );
+}
+
+async function walletLookup(
+  wallet: string,
+  collectionId: MonkeCollectionId | "all",
+  base: LookupResult
+): Promise<LookupResult> {
+  const monkes = await getWalletMonkes(wallet, collectionId);
+  monkes.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+  return {
+    ...base,
+    kind: base.kind === "sns" ? "sns" : "wallet",
+    monke: monkes[0] || null,
+    monkes,
+    resolvedWallet: wallet,
+    error: monkes.length
+      ? undefined
+      : collectionId === "all"
+        ? "No SMB monkes found in this wallet"
+        : `No ${COLLECTIONS[collectionId].shortName} monkes found in this wallet`,
+  };
 }
 
 export async function lookupMonke(
   rawQuery: string,
-  opts?: { preferWallet?: boolean; collectionId?: MonkeCollectionId }
+  opts?: {
+    preferWallet?: boolean;
+    collectionId?: MonkeCollectionId | "all";
+  }
 ): Promise<LookupResult> {
   const query = rawQuery.trim();
-  const collectionId = opts?.collectionId || "smb_gen2";
+  const hint = parseCollectionHint(query);
+  const collectionId: MonkeCollectionId | "all" =
+    opts?.collectionId || hint || "smb_gen2";
+
+  const floorCollection: MonkeCollectionId =
+    collectionId === "all" ? "smb_gen2" : collectionId;
+
+  const stats = collectionId === "all" ? null : indexStats(collectionId);
+
   const base: LookupResult = {
     kind: "unknown",
     query,
@@ -54,24 +100,77 @@ export async function lookupMonke(
     rarity: null,
     floor: null,
     collectionId,
+    indexPartial: stats?.partial,
+    indexCount: stats?.count,
   };
 
   if (!query) {
     return { ...base, error: "Empty query" };
   }
 
-  const floorP = getMeFloor(collectionId);
+  const floorP = getMeFloor(floorCollection);
+
+  // SNS first (toly.sol / name)
+  if (looksLikeSns(query)) {
+    let domain: string;
+    let owner: string;
+    try {
+      const resolved = await resolveSns(query);
+      domain = resolved.domain;
+      owner = resolved.owner;
+    } catch (e) {
+      return {
+        ...base,
+        kind: "sns",
+        floor: await floorP,
+        error:
+          e instanceof Error
+            ? `SNS resolve failed: ${e.message}`
+            : "SNS resolve failed",
+      };
+    }
+    try {
+      const result = await walletLookup(owner, collectionId, {
+        ...base,
+        kind: "sns",
+        resolvedDomain: domain,
+        resolvedWallet: owner,
+      });
+      return { ...result, floor: await floorP };
+    } catch (e) {
+      return {
+        ...base,
+        kind: "sns",
+        resolvedDomain: domain,
+        resolvedWallet: owner,
+        floor: await floorP,
+        error:
+          e instanceof Error
+            ? `Wallet scan failed: ${e.message}`
+            : "Wallet scan failed",
+      };
+    }
+  }
+
   const num = parseMonkeNumber(query);
 
-  // Number lookup via HowRare → mint → Helius
+  // Number lookup — needs concrete collection (default Gen2)
   if (num != null) {
-    const rarity = await howrareByNumber(collectionId, num);
+    const cid: MonkeCollectionId =
+      collectionId === "all" ? hint || "smb_gen2" : collectionId;
+    const rarity = await howrareByNumber(cid, num);
     if (!rarity?.mint) {
+      const st = indexStats(cid);
       return {
         ...base,
         kind: "number",
+        collectionId: cid,
         floor: await floorP,
-        error: `No mint found for ${COLLECTIONS[collectionId].shortName} #${num}`,
+        indexPartial: st.partial,
+        indexCount: st.count,
+        error: st.partial
+          ? `No mint in index for ${COLLECTIONS[cid].shortName} #${num} (index has ${st.count}/${COLLECTIONS[cid].supply} — try mint address)`
+          : `No mint found for ${COLLECTIONS[cid].shortName} #${num}`,
       };
     }
     let monke: NormalizedMonke | null = null;
@@ -84,7 +183,7 @@ export async function lookupMonke(
         number: num,
         image: rarity.image,
         owner: null,
-        collectionMint: COLLECTIONS[collectionId].collectionMint || null,
+        collectionMint: COLLECTIONS[cid].collectionMint,
         attributes: rarity.attributes.map((a) => ({
           trait_type: a.name,
           value: a.value,
@@ -101,18 +200,23 @@ export async function lookupMonke(
       monkes: monke ? [monke] : [],
       rarity,
       floor: await floorP,
-      collectionId,
+      collectionId: cid,
+      indexPartial: indexStats(cid).partial,
+      indexCount: indexStats(cid).count,
     };
   }
 
   if (isMintAddress(query)) {
-    // Try as NFT mint first
     let monke: NormalizedMonke | null = null;
     try {
       monke = await getAsset(query);
     } catch {
       monke = null;
     }
+
+    const detected =
+      (monke && detectCollectionFromMonke(monke)) ||
+      collectionIdForMint(query);
 
     const asNft =
       monke &&
@@ -121,39 +225,28 @@ export async function lookupMonke(
         Boolean(monke.image));
 
     if (asNft && monke && !opts?.preferWallet) {
-      const rarity =
-        (await howrareByMint(collectionId, monke.mint)) ||
-        (monke.number != null
-          ? await howrareByNumber(collectionId, monke.number)
-          : null);
+      const cid =
+        detected ||
+        (collectionId === "all" ? "smb_gen2" : collectionId);
+      const rarity = await attachRarity(monke, cid);
       return {
         kind: "mint",
         query,
         monke,
         monkes: [monke],
         rarity,
-        floor: await floorP,
-        collectionId: looksLikeSmb(monke) ? collectionId : null,
+        floor: await getMeFloor(cid),
+        collectionId: detected || cid,
       };
     }
 
     // Treat as wallet
     try {
-      const { items } = await getAssetsByOwner(query, 1, 200);
-      const monkes = filterMonkes(items, [
-        SMB_GEN2_COLLECTION,
-        COLLECTIONS.smb_gen3.collectionMint || "",
-      ]);
-      return {
+      const result = await walletLookup(query, collectionId, {
+        ...base,
         kind: "wallet",
-        query,
-        monke: monkes[0] || null,
-        monkes,
-        rarity: null,
-        floor: await floorP,
-        collectionId,
-        error: monkes.length ? undefined : "No SMB monkes found in this wallet",
-      };
+      });
+      return { ...result, floor: await floorP };
     } catch (e) {
       return {
         ...base,
@@ -174,7 +267,6 @@ export async function lookupMonke(
   return {
     ...base,
     floor: await floorP,
-    error:
-      "Enter a monke # (e.g. 1355), mint address, or wallet address",
+    error: "Enter monke #, mint, wallet, or SNS (.sol)",
   };
 }

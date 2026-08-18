@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+type CollectionId = "smb_gen2" | "smb_gen3" | "smb_barrel" | "all";
+
 type Attr = { trait_type: string; value: string | number; rarity?: string };
 
 interface Monke {
@@ -21,7 +23,7 @@ interface Rarity {
   name: string;
   image: string;
   rank: number | null;
-  link: string;
+  link: string | null;
   attributes: { name: string; value: string; rarity?: string }[];
 }
 
@@ -38,8 +40,20 @@ interface LookupResponse {
   monkes: Monke[];
   rarity: Rarity | null;
   floor: Floor | null;
+  collectionId?: CollectionId | null;
+  resolvedWallet?: string;
+  resolvedDomain?: string;
+  indexPartial?: boolean;
+  indexCount?: number;
   error?: string;
 }
+
+const TABS: { id: CollectionId; label: string }[] = [
+  { id: "smb_gen2", label: "Gen2" },
+  { id: "smb_gen3", label: "Gen3" },
+  { id: "smb_barrel", label: "Barrel" },
+  { id: "all", label: "All" },
+];
 
 function shortAddr(a: string, n = 4) {
   if (!a || a.length < 10) return a;
@@ -53,66 +67,93 @@ function fmtSol(n: number | null | undefined) {
 
 export default function LookupApp() {
   const [q, setQ] = useState("");
+  const [collection, setCollection] = useState<CollectionId>("smb_gen2");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<LookupResponse | null>(null);
   const [floor, setFloor] = useState<Floor | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/api/floor?collection=smb_gen2")
+  const loadFloor = useCallback((c: CollectionId) => {
+    const col = c === "all" ? "smb_gen2" : c;
+    fetch(`/api/floor?collection=${col}`)
       .then((r) => r.json())
       .then((j) => setFloor(j.floor || null))
       .catch(() => {});
   }, []);
 
-  // deep link ?q=
+  useEffect(() => {
+    loadFloor(collection);
+  }, [collection, loadFloor]);
+
+  const run = useCallback(
+    async (query: string, col: CollectionId = collection) => {
+      const trimmed = query.trim();
+      if (!trimmed) return;
+      setLoading(true);
+      setErr(null);
+      try {
+        const res = await fetch(
+          `/api/lookup?q=${encodeURIComponent(trimmed)}&collection=${col}`
+        );
+        const json = (await res.json()) as LookupResponse & { error?: string };
+        if (!res.ok && json.error) {
+          setErr(json.error);
+          setData(null);
+        } else {
+          setData(json);
+          if (json.floor) setFloor(json.floor);
+          if (json.error) setErr(json.error);
+          const url = new URL(window.location.href);
+          url.searchParams.set("q", trimmed);
+          url.searchParams.set("collection", col);
+          window.history.replaceState({}, "", url.toString());
+        }
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : "Request failed");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [collection]
+  );
+
+  // deep link
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     const initial = sp.get("q");
+    const c = sp.get("collection") as CollectionId | null;
+    if (c && TABS.some((t) => t.id === c)) setCollection(c);
     if (initial) {
       setQ(initial);
-      void run(initial);
+      void run(initial, c && TABS.some((t) => t.id === c) ? c : "smb_gen2");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const run = useCallback(async (query: string) => {
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    setLoading(true);
-    setErr(null);
-    try {
-      const res = await fetch(
-        `/api/lookup?q=${encodeURIComponent(trimmed)}&collection=smb_gen2`
-      );
-      const json = (await res.json()) as LookupResponse & { error?: string };
-      if (!res.ok && json.error) {
-        setErr(json.error);
-        setData(null);
-      } else {
-        setData(json);
-        if (json.floor) setFloor(json.floor);
-        if (json.error) setErr(json.error);
-        const url = new URL(window.location.href);
-        url.searchParams.set("q", trimmed);
-        window.history.replaceState({}, "", url.toString());
-      }
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Request failed");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    void run(q);
+    void run(q, collection);
+  };
+
+  const onTab = (id: CollectionId) => {
+    setCollection(id);
+    setData(null);
+    setErr(null);
+    if (q.trim()) void run(q, id);
   };
 
   const primary = data?.monke;
   const rarity = data?.rarity;
-  const gallery = data?.kind === "wallet" ? data.monkes : [];
+  const gallery =
+    data?.kind === "wallet" || data?.kind === "sns" ? data.monkes : [];
+
+  const examples =
+    collection === "smb_gen3"
+      ? ["20", "7113", "4502"]
+      : collection === "smb_barrel"
+        ? ["430", "12870"]
+        : ["1355", "1", "420"];
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 pb-16 pt-10 sm:px-6">
@@ -120,14 +161,13 @@ export default function LookupApp() {
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-banana/30 bg-card px-3 py-1 font-mono text-xs text-banana">
           monke.bar
           <span className="text-muted">·</span>
-          SMB Gen2 lookup
+          SMB lookup
         </div>
         <h1 className="font-pixel text-3xl tracking-tight text-banana sm:text-4xl">
           SOLANA MONKE
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Lookup by monke #, mint, or wallet. Floor + HowRare rank + on-chain
-          owner.
+          Gen2 · Gen3 · Barrel — search by #, mint, wallet, or SNS (.sol)
         </p>
 
         <div className="mt-5 grid grid-cols-3 gap-2 text-left sm:gap-3">
@@ -142,11 +182,32 @@ export default function LookupApp() {
         </div>
       </header>
 
-      <form onSubmit={onSubmit} className="mb-6 flex gap-2">
+      {/* Collection toggle */}
+      <div className="mb-4 flex flex-wrap justify-center gap-2">
+        {TABS.map((t) => {
+          const active = collection === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onTab(t.id)}
+              className={`rounded-full px-4 py-2 font-mono text-xs font-semibold transition sm:text-sm ${
+                active
+                  ? "bg-banana text-ink"
+                  : "border border-border bg-card text-muted hover:border-banana/40 hover:text-banana"
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <form onSubmit={onSubmit} className="mb-4 flex gap-2">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="1355 · mint · wallet"
+          placeholder="# · mint · wallet · name.sol"
           spellCheck={false}
           autoComplete="off"
           className="min-w-0 flex-1 rounded-xl border border-border bg-card px-4 py-3 font-mono text-sm text-foreground outline-none ring-banana/40 placeholder:text-muted focus:ring-2"
@@ -161,25 +222,55 @@ export default function LookupApp() {
       </form>
 
       <div className="mb-6 flex flex-wrap gap-2">
-        {["1355", "1", "420"].map((ex) => (
+        {examples.map((ex) => (
           <button
             key={ex}
             type="button"
             onClick={() => {
               setQ(ex);
-              void run(ex);
+              void run(ex, collection);
             }}
             className="rounded-lg border border-border bg-card px-3 py-1.5 font-mono text-xs text-muted hover:border-banana/40 hover:text-banana"
           >
             #{ex}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => {
+            setQ("toly.sol");
+            void run("toly.sol", collection);
+          }}
+          className="rounded-lg border border-border bg-card px-3 py-1.5 font-mono text-xs text-muted hover:border-banana/40 hover:text-banana"
+        >
+          toly.sol
+        </button>
       </div>
 
       {err && (
         <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {err}
         </div>
+      )}
+
+      {data?.resolvedDomain && (
+        <p className="mb-3 font-mono text-xs text-muted">
+          SNS{" "}
+          <span className="text-banana">{data.resolvedDomain}</span>
+          {data.resolvedWallet && (
+            <>
+              {" → "}
+              <a
+                href={`https://solscan.io/account/${data.resolvedWallet}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-banana hover:underline"
+              >
+                {shortAddr(data.resolvedWallet, 6)}
+              </a>
+            </>
+          )}
+        </p>
       )}
 
       {primary && (
@@ -196,7 +287,7 @@ export default function LookupApp() {
             </div>
             <div className="flex flex-col gap-3 p-5">
               <div>
-                <h2 className="font-pixel text-2xl text-banana">
+                <h2 className="font-pixel text-xl text-banana sm:text-2xl">
                   {primary.name}
                 </h2>
                 {rarity?.rank != null && (
@@ -317,10 +408,10 @@ export default function LookupApp() {
         </article>
       )}
 
-      {gallery.length > 1 && (
+      {gallery.length > 0 && (
         <section className="mt-8">
           <h3 className="mb-3 font-pixel text-lg text-banana">
-            Wallet monkes ({gallery.length})
+            {data?.kind === "sns" ? "SNS" : "Wallet"} monkes ({gallery.length})
           </h3>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {gallery.map((m) => (
@@ -329,7 +420,7 @@ export default function LookupApp() {
                   type="button"
                   onClick={() => {
                     setQ(m.mint);
-                    void run(m.mint);
+                    void run(m.mint, collection);
                   }}
                   className="w-full overflow-hidden rounded-xl border border-border bg-card text-left transition hover:border-banana/50"
                 >
@@ -351,7 +442,7 @@ export default function LookupApp() {
       )}
 
       <footer className="mt-auto pt-12 text-center font-mono text-[11px] text-muted">
-        Unofficial tool · data via Helius DAS + HowRare + Magic Eden ·{" "}
+        Unofficial · Helius + HowRare + Magic Eden + SNS ·{" "}
         <a
           href="https://solanamonkey.business/"
           target="_blank"
@@ -360,6 +451,11 @@ export default function LookupApp() {
         >
           solanamonkey.business
         </a>
+        {data?.indexPartial && data.indexCount != null && (
+          <span className="mt-1 block text-[10px] opacity-70">
+            # index partial ({data.indexCount.toLocaleString()} known)
+          </span>
+        )}
       </footer>
     </div>
   );

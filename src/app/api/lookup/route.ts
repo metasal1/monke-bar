@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lookupMonke } from "@/lib/lookup";
-import type { MonkeCollectionId } from "@/lib/collections";
+import { isCollectionId, type MonkeCollectionId } from "@/lib/collections";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() || "";
-  const collection = (req.nextUrl.searchParams.get("collection") ||
-    "smb_gen2") as MonkeCollectionId;
+  const rawCollection = req.nextUrl.searchParams.get("collection") || "smb_gen2";
+  const collection: MonkeCollectionId | "all" =
+    rawCollection === "all"
+      ? "all"
+      : isCollectionId(rawCollection)
+        ? rawCollection
+        : "smb_gen2";
   const preferWallet = req.nextUrl.searchParams.get("wallet") === "1";
 
   if (!q) {
     return NextResponse.json(
-      { error: "Missing q (monke #, mint, or wallet)" },
+      { error: "Missing q (monke #, mint, wallet, or .sol)" },
       { status: 400 }
     );
   }

@@ -1,6 +1,8 @@
 import type { MonkeCollectionId } from "./collections";
 import { COLLECTIONS } from "./collections";
 import smbGen2Index from "@/data/smb-gen2-index.json";
+import smbGen3Index from "@/data/smb-gen3-index.json";
+import smbBarrelIndex from "@/data/smb-barrel-index.json";
 
 export interface HowrareItem {
   id: number;
@@ -8,7 +10,7 @@ export interface HowrareItem {
   name: string;
   image: string;
   rank: number | null;
-  link: string;
+  link: string | null;
   attributes: { name: string; value: string; rarity?: string }[];
 }
 
@@ -20,19 +22,32 @@ interface CompactEntry {
 
 interface StaticIndex {
   collection: string;
-  slug: string;
+  slug?: string | null;
   count: number;
   byId: Record<string, CompactEntry>;
+  partial?: boolean;
 }
 
-const STATIC: Partial<Record<MonkeCollectionId, StaticIndex>> = {
+const STATIC: Record<MonkeCollectionId, StaticIndex> = {
   smb_gen2: smbGen2Index as StaticIndex,
+  smb_gen3: smbGen3Index as StaticIndex,
+  smb_barrel: smbBarrelIndex as StaticIndex,
 };
 
-// reverse mint → id for gen2
-const GEN2_MINT_TO_ID = new Map<string, number>();
-for (const [id, e] of Object.entries(STATIC.smb_gen2!.byId)) {
-  if (e?.m) GEN2_MINT_TO_ID.set(e.m, Number(id));
+const MINT_TO_ID: Record<MonkeCollectionId, Map<string, number>> = {
+  smb_gen2: new Map(),
+  smb_gen3: new Map(),
+  smb_barrel: new Map(),
+};
+
+for (const id of Object.keys(STATIC) as MonkeCollectionId[]) {
+  for (const [num, e] of Object.entries(STATIC[id].byId)) {
+    if (e?.m) MINT_TO_ID[id].set(e.m, Number(num));
+  }
+}
+
+function displayName(collectionId: MonkeCollectionId, num: number): string {
+  return `${COLLECTIONS[collectionId].numberPrefix} #${num}`;
 }
 
 function fromStatic(
@@ -43,96 +58,49 @@ function fromStatic(
   if (!idx) return null;
   const e = idx.byId[String(num)];
   if (!e?.m) return null;
-  const slug = idx.slug || COLLECTIONS[collectionId].howrareSlug || "smb";
+  const slug = idx.slug || COLLECTIONS[collectionId].howrareSlug;
   return {
     id: num,
     mint: e.m,
-    name: `SMB #${num}`,
+    name: displayName(collectionId, num),
     image: e.img || "",
     rank: e.r != null ? Number(e.r) : null,
-    link: `https://howrare.is/${slug}/${num}`,
+    link: slug ? `https://howrare.is/${slug}/${num}` : null,
     attributes: [],
   };
 }
 
-function fromStaticMint(
-  collectionId: MonkeCollectionId,
-  mint: string
-): HowrareItem | null {
-  if (collectionId === "smb_gen2") {
-    const id = GEN2_MINT_TO_ID.get(mint);
-    if (id != null) return fromStatic("smb_gen2", id);
-  }
-  return null;
-}
-
-/** Optional live HowRare hydrate for traits (slow; only when needed). */
-export async function hydrateHowrareTraits(
-  collectionId: MonkeCollectionId,
-  num: number
-): Promise<HowrareItem | null> {
-  const slug = COLLECTIONS[collectionId].howrareSlug;
-  if (!slug) return null;
-  try {
-    // collection dump is huge — use static + on-chain attrs instead
-    return fromStatic(collectionId, num);
-  } catch {
-    return null;
-  }
+export function indexStats(collectionId: MonkeCollectionId): {
+  count: number;
+  partial: boolean;
+} {
+  const idx = STATIC[collectionId];
+  return {
+    count: idx?.count ?? 0,
+    partial: Boolean(idx?.partial || COLLECTIONS[collectionId].partialIndex),
+  };
 }
 
 export async function howrareByNumber(
   collectionId: MonkeCollectionId,
   num: number
 ): Promise<HowrareItem | null> {
-  const local = fromStatic(collectionId, num);
-  if (local) return local;
-
-  // fallback live (Gen3 etc.)
-  const slug = COLLECTIONS[collectionId].howrareSlug;
-  if (!slug) return null;
-  try {
-    const res = await fetch(
-      `https://api.howrare.is/v0.1/collections/${slug}`,
-      { next: { revalidate: 86400 }, headers: { Accept: "application/json" } }
-    );
-    if (!res.ok) return null;
-    const json = await res.json();
-    const items = json?.result?.data?.items;
-    if (!Array.isArray(items)) return null;
-    const raw = items.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (i: any) => Number(i.id) === num
-    );
-    if (!raw) return null;
-    return {
-      id: num,
-      mint: String(raw.mint || ""),
-      name: String(raw.name || `SMB #${num}`),
-      image: String(raw.image || ""),
-      rank: raw.rank != null ? Number(raw.rank) : null,
-      link: String(raw.link || `https://howrare.is/${slug}/${num}`),
-      attributes: Array.isArray(raw.attributes)
-        ? raw.attributes.map(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (a: any) => ({
-              name: String(a.name || ""),
-              value: String(a.value ?? ""),
-              rarity: a.rarity != null ? String(a.rarity) : undefined,
-            })
-          )
-        : [],
-    };
-  } catch {
-    return null;
-  }
+  return fromStatic(collectionId, num);
 }
 
 export async function howrareByMint(
   collectionId: MonkeCollectionId,
   mint: string
 ): Promise<HowrareItem | null> {
-  const local = fromStaticMint(collectionId, mint);
-  if (local) return local;
+  const id = MINT_TO_ID[collectionId].get(mint);
+  if (id == null) return null;
+  return fromStatic(collectionId, id);
+}
+
+/** Detect which collection a mint belongs to via static indexes */
+export function collectionIdForMint(mint: string): MonkeCollectionId | null {
+  for (const id of Object.keys(MINT_TO_ID) as MonkeCollectionId[]) {
+    if (MINT_TO_ID[id].has(mint)) return id;
+  }
   return null;
 }
