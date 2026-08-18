@@ -468,6 +468,16 @@ export default function LookupApp() {
           >
             metasal.xyz
           </a>
+          {" · "}
+          my monke{" "}
+          <a
+            href="https://solscan.io/token/85kc8h9QjHbwahhaYB5Funx9cjXnQE3zJX1HdeJQBgWu"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-banana hover:underline"
+          >
+            SMB Gen3 #12192
+          </a>
         </p>
       </footer>
     </div>
