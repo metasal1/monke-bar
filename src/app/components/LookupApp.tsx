@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { monkePath } from "@/lib/deeplink";
 import { HOUSE_MONKE } from "@/lib/house-monke";
+import {
+  meCollectionUrl,
+  meItemUrl,
+  tensorCollectionUrl,
+  tensorItemUrl,
+} from "@/lib/markets";
+import { track } from "@/lib/analytics";
 
 type CollectionId = "smb_gen2" | "smb_gen3" | "smb_barrel" | "all";
 
@@ -165,8 +172,13 @@ export default function LookupApp({
         if (!res.ok && json.error) {
           setErr(json.error);
           setData(null);
+          track("lookup_error", { q: trimmed, collection: col });
         } else {
           setData(json);
+          track("lookup", {
+            kind: json.kind || "unknown",
+            collection: String(json.collectionId || col),
+          });
           if (json.floor) setFloor(json.floor);
           if (json.error) setErr(json.error);
           if (json.collectionId && json.collectionId !== "all") {
@@ -302,6 +314,43 @@ export default function LookupApp({
           );
         })}
       </div>
+
+      {(meCollectionUrl(collection) || tensorCollectionUrl(collection)) && (
+        <div className="mb-4 flex flex-wrap justify-center gap-3 text-pixel-xs">
+          {meCollectionUrl(collection) && (
+            <a
+              href={meCollectionUrl(collection)!}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="border-2 border-border bg-wood px-3 py-2 text-banana pixel-btn hover:border-banana"
+              onClick={() =>
+                track("outbound_market", {
+                  venue: "magic_eden_collection",
+                  collection,
+                })
+              }
+            >
+              ME floor
+            </a>
+          )}
+          {tensorCollectionUrl(collection) && (
+            <a
+              href={tensorCollectionUrl(collection)!}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="border-2 border-border bg-wood px-3 py-2 text-banana pixel-btn hover:border-banana"
+              onClick={() =>
+                track("outbound_market", {
+                  venue: "tensor_collection",
+                  collection,
+                })
+              }
+            >
+              Tensor trade
+            </a>
+          )}
+        </div>
+      )}
 
       <form onSubmit={onSubmit} className="mb-4 flex gap-2">
         <input
@@ -477,18 +526,30 @@ export default function LookupApp({
                   v={
                     <span className="flex flex-wrap gap-2">
                       <a
-                        href={`https://magiceden.io/item-details/${primary.mint}`}
+                        href={meItemUrl(primary.mint)}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer sponsored"
                         className="text-banana hover:underline"
+                        onClick={() =>
+                          track("outbound_market", {
+                            venue: "magic_eden",
+                            mint: primary.mint,
+                          })
+                        }
                       >
                         Magic Eden
                       </a>
                       <a
-                        href={`https://www.tensor.trade/item/${primary.mint}`}
+                        href={tensorItemUrl(primary.mint)}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer sponsored"
                         className="text-banana hover:underline"
+                        onClick={() =>
+                          track("outbound_market", {
+                            venue: "tensor",
+                            mint: primary.mint,
+                          })
+                        }
                       >
                         Tensor
                       </a>
