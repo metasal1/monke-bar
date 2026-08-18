@@ -39,3 +39,10 @@ Vercel project → attach `monke.bar`. Preview via CF tunnel before PR.
 - Primary: https://monke.bar
 - Backup: https://monke.sol.new
 - Worker: https://monke-bar.gm-4e8.workers.dev
+
+### SNS monke.sol
+
+Host patterns (gateway → Worker):
+- `monke.sol` home
+- `gen3-12192.monke.sol` deeplink
+- `name.monke.sol` SNS wallet lookup

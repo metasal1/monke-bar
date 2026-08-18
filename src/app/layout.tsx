@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s · monke.bar",
   },
   description:
-    "Pixel Solana Monkey Business bar. Lookup SMB Gen2, Gen3, and Barrel by monke #, mint, wallet, or SNS (.sol). Floor, owner. Trade on Tensor + Magic Eden. Backup: monke.sol.new.",
+    "Pixel Solana Monkey Business bar. Lookup SMB Gen2, Gen3, and Barrel by monke #, mint, wallet, or SNS (.sol). Floor, owner. Trade on Tensor + Magic Eden. Backup: monke.sol.new. SNS hosts: monke.sol / *.monke.sol.",
   metadataBase: new URL(SITE),
   applicationName: "monke.bar",
   keywords: [

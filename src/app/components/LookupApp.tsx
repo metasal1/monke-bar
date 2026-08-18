@@ -273,7 +273,7 @@ export default function LookupApp({
           Gen2 · Gen3 · Barrel
         </p>
         <p className="mt-1 text-[10px] leading-relaxed text-muted/80 sm:text-[11px]">
-          # · mint · wallet · .sol
+          # · mint · wallet · .sol · *.monke.sol
         </p>
         <Link
           href={HOUSE_MONKE.href}
@@ -359,7 +359,7 @@ export default function LookupApp({
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="# · mint · wallet · name.sol"
+          placeholder="# · mint · wallet · name.sol · *.monke.sol"
           spellCheck={false}
           autoComplete="off"
           autoCapitalize="none"

@@ -24,6 +24,14 @@ Unofficial Solana Monkey Business lookup tool.
 - Magic Eden item: https://magiceden.io/item-details/{mint}?utm_source=metasal&utm_medium=referral&utm_campaign=monke.bar
 - Magic Eden market: https://magiceden.io/marketplace/{symbol}?utm_source=metasal&utm_medium=referral&utm_campaign=monke.bar
 
+
+## monke.sol hosts
+- monke.sol → home (when Host is routed to this Worker / SNS gateway)
+- 1355.monke.sol → /gen2/1355
+- gen3-12192.monke.sol → /gen3/12192
+- barrel-430.monke.sol → /barrel/430
+- name.monke.sol → SNS resolve name.monke.sol
+
 ## Metasal monke
 - SMB Gen3 #12192
 - https://monke.bar/gen3/12192
