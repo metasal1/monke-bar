@@ -1,13 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0c0a08;
-  --foreground: #f5efe6;
-  --card: #16120e;
-  --border: #3a2f24;
-  --banana: #f5c518;
-  --ink: #0a0806;
-  --muted: #9a8b78;
+  --background: #0a0705;
+  --foreground: #f6edd8;
+  --card: #1a120c;
+  --border: #4a3422;
+  --banana: #ffd84d;
+  --banana-dim: #c9a227;
+  --ink: #070504;
+  --muted: #a89278;
+  --wood: #2a1a10;
+  --neon: #39ff14;
+  --bar-red: #c44b2b;
 }
 
 @theme inline {
@@ -16,27 +20,90 @@
   --color-card: var(--card);
   --color-border: var(--border);
   --color-banana: var(--banana);
+  --color-banana-dim: var(--banana-dim);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
+  --color-wood: var(--wood);
+  --color-neon: var(--neon);
+  --color-bar-red: var(--bar-red);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-pixel: var(--font-pixel);
 }
 
 body {
-  background:
-    radial-gradient(1200px 600px at 50% -10%, #3a2a10 0%, transparent 55%),
-    var(--background);
+  background-color: var(--background);
+  background-image:
+    linear-gradient(180deg, rgba(255, 216, 77, 0.06) 0%, transparent 28%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 11px,
+      rgba(74, 52, 34, 0.25) 11px,
+      rgba(74, 52, 34, 0.25) 12px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 11px,
+      rgba(74, 52, 34, 0.12) 11px,
+      rgba(74, 52, 34, 0.12) 12px
+    ),
+    radial-gradient(900px 420px at 50% -8%, #5a3a14 0%, transparent 55%);
   color: var(--foreground);
   min-height: 100vh;
+  image-rendering: pixelated;
 }
 
 .font-pixel {
   font-family: var(--font-pixel), var(--font-mono), ui-monospace, monospace;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.pixel-frame {
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 0 4px var(--banana-dim),
+    0 0 0 6px #000,
+    8px 8px 0 #000;
+}
+
+.bar-sign {
+  background: linear-gradient(180deg, #3a2414 0%, #1a1008 100%);
+  border: 3px solid var(--banana);
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 18px rgba(255, 216, 77, 0.35),
+    inset 0 0 20px rgba(0, 0, 0, 0.45);
+}
+
+.pixel-btn {
+  image-rendering: pixelated;
+  box-shadow: 3px 3px 0 #000;
+}
+.pixel-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+.pixel-img {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.bar-rail {
+  height: 10px;
+  background: repeating-linear-gradient(
+    90deg,
+    #5a3a22 0 8px,
+    #3a2414 8px 16px
+  );
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--banana) 40%, transparent);
+  background: color-mix(in oklab, var(--banana) 45%, transparent);
   color: var(--ink);
 }

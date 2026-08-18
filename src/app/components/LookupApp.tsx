@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { monkePath } from "@/lib/deeplink";
+import { HOUSE_MONKE } from "@/lib/house-monke";
 
 type CollectionId = "smb_gen2" | "smb_gen3" | "smb_barrel" | "all";
 
@@ -55,6 +58,28 @@ const TABS: { id: CollectionId; label: string }[] = [
   { id: "all", label: "All" },
 ];
 
+const GEN2_MINT = "SMBtHCCC6RYRutFEPb4gZqeBLUZbMNhRKaMKZZLHi7W";
+const GEN3_MINT = "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH";
+const BARREL_MINT = "Ce92PLCQrz2gLNAE5DFovvmpoeLBLtpTzqqeD4Px76hp";
+
+function detectCol(m: Monke): CollectionId | null {
+  if (m.collectionMint === GEN2_MINT) return "smb_gen2";
+  if (m.collectionMint === GEN3_MINT) return "smb_gen3";
+  if (m.collectionMint === BARREL_MINT) return "smb_barrel";
+  if (/Barrel\s*#/i.test(m.name)) return "smb_barrel";
+  if (/Gen3\s*#/i.test(m.name)) return "smb_gen3";
+  if (/^SMB\s*#/i.test(m.name)) return "smb_gen2";
+  return null;
+}
+
+function monkeHref(m: Monke, fallbackCol: CollectionId): string {
+  const col = detectCol(m) || (fallbackCol === "all" ? "smb_gen2" : fallbackCol);
+  return (
+    monkePath(col, m.number, m.mint) ||
+    `/mint/${m.mint}`
+  );
+}
+
 function shortAddr(a: string, n = 4) {
   if (!a || a.length < 10) return a;
   return `${a.slice(0, n)}…${a.slice(-n)}`;
@@ -65,9 +90,20 @@ function fmtSol(n: number | null | undefined) {
   return `${n.toLocaleString(undefined, { maximumFractionDigits: 2 })} SOL`;
 }
 
-export default function LookupApp() {
-  const [q, setQ] = useState("");
-  const [collection, setCollection] = useState<CollectionId>("smb_gen2");
+export interface LookupAppProps {
+  initialCollection?: CollectionId;
+  initialQuery?: string;
+  deeplinkPath?: string;
+}
+
+export default function LookupApp({
+  initialCollection = "smb_gen2",
+  initialQuery = "",
+  deeplinkPath,
+}: LookupAppProps = {}) {
+  const [q, setQ] = useState(initialQuery);
+  const [collection, setCollection] =
+    useState<CollectionId>(initialCollection);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<LookupResponse | null>(null);
   const [floor, setFloor] = useState<Floor | null>(null);
@@ -84,6 +120,36 @@ export default function LookupApp() {
   useEffect(() => {
     loadFloor(collection);
   }, [collection, loadFloor]);
+
+  const pushPath = useCallback(
+    (json: LookupResponse, query: string, col: CollectionId) => {
+      const m = json.monke;
+      const resolvedCol =
+        (json.collectionId as CollectionId | null | undefined) ||
+        (m ? detectCol(m) : null) ||
+        col;
+      let path: string | null = null;
+      if (m) {
+        path = monkePath(
+          resolvedCol === "all" ? detectCol(m) : resolvedCol,
+          m.number,
+          m.mint
+        );
+      }
+      if (!path && json.kind === "sns" && json.resolvedDomain) {
+        path = `/?q=${encodeURIComponent(json.resolvedDomain)}&collection=${col}`;
+      } else if (!path && json.kind === "wallet") {
+        path = `/?q=${encodeURIComponent(query)}&collection=${col}`;
+      } else if (!path) {
+        path = monkePath(col === "all" ? "smb_gen2" : col, Number(query) || null) ||
+          `/?q=${encodeURIComponent(query)}&collection=${col}`;
+      }
+      if (path && path !== window.location.pathname + window.location.search) {
+        window.history.replaceState({}, "", path);
+      }
+    },
+    []
+  );
 
   const run = useCallback(
     async (query: string, col: CollectionId = collection) => {
@@ -103,10 +169,10 @@ export default function LookupApp() {
           setData(json);
           if (json.floor) setFloor(json.floor);
           if (json.error) setErr(json.error);
-          const url = new URL(window.location.href);
-          url.searchParams.set("q", trimmed);
-          url.searchParams.set("collection", col);
-          window.history.replaceState({}, "", url.toString());
+          if (json.collectionId && json.collectionId !== "all") {
+            setCollection(json.collectionId as CollectionId);
+          }
+          pushPath(json, trimmed, col);
         }
       } catch (e) {
         setErr(e instanceof Error ? e.message : "Request failed");
@@ -114,11 +180,17 @@ export default function LookupApp() {
         setLoading(false);
       }
     },
-    [collection]
+    [collection, pushPath]
   );
 
-  // deep link
+  // initial / deeplink
   useEffect(() => {
+    if (initialQuery) {
+      setQ(initialQuery);
+      setCollection(initialCollection);
+      void run(initialQuery, initialCollection);
+      return;
+    }
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     const initial = sp.get("q");
@@ -148,27 +220,56 @@ export default function LookupApp() {
   const gallery =
     data?.kind === "wallet" || data?.kind === "sns" ? data.monkes : [];
 
+  const primaryHref = primary
+    ? monkeHref(primary, (data?.collectionId as CollectionId) || collection)
+    : null;
+
   const examples =
     collection === "smb_gen3"
-      ? ["20", "7113", "4502"]
+      ? [
+          { label: "#20", href: "/gen3/20", q: "20" },
+          { label: "#7113", href: "/gen3/7113", q: "7113" },
+          { label: "#12192", href: "/gen3/12192", q: "12192" },
+        ]
       : collection === "smb_barrel"
-        ? ["430", "12870"]
-        : ["1355", "1", "420"];
+        ? [
+            { label: "#430", href: "/barrel/430", q: "430" },
+            { label: "#12870", href: "/barrel/12870", q: "12870" },
+          ]
+        : [
+            { label: "#1355", href: "/gen2/1355", q: "1355" },
+            { label: "#1", href: "/gen2/1", q: "1" },
+            { label: "#420", href: "/gen2/420", q: "420" },
+          ];
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 pb-16 pt-10 sm:px-6">
+    <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 pb-16 pt-8 sm:px-6">
       <header className="mb-8 text-center">
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-banana/30 bg-card px-3 py-1 font-mono text-xs text-banana">
+        <div className="bar-sign mx-auto mb-4 inline-block px-5 py-3">
+          <Link
+            href={HOUSE_MONKE.href}
+            className="font-pixel text-[10px] text-banana hover:underline sm:text-xs"
+            title={HOUSE_MONKE.name}
+          >
+            ★ THE MONKE BAR ★
+          </Link>
+        </div>
+        <Link
+          href={HOUSE_MONKE.href}
+          className="mb-3 inline-flex items-center gap-2 rounded-none border-2 border-banana bg-wood px-3 py-1 font-mono text-xs text-banana pixel-btn"
+          title={`House monke ${HOUSE_MONKE.name}`}
+        >
           monke.bar
           <span className="text-muted">·</span>
-          SMB lookup
-        </div>
-        <h1 className="font-pixel text-3xl tracking-tight text-banana sm:text-4xl">
+          <span className="text-neon">{HOUSE_MONKE.name}</span>
+        </Link>
+        <h1 className="font-pixel text-2xl tracking-tight text-banana sm:text-4xl">
           SOLANA MONKE
         </h1>
-        <p className="mt-2 text-sm text-muted">
-          Gen2 · Gen3 · Barrel — search by #, mint, wallet, or SNS (.sol)
+        <p className="mt-2 font-mono text-xs text-muted sm:text-sm">
+          Pixel PFP bar · Gen2 · Gen3 · Barrel · # · mint · wallet · .sol
         </p>
+        <div className="bar-rail mx-auto mt-4 w-full max-w-md" />
 
         <div className="mt-5 grid grid-cols-3 gap-2 text-left sm:gap-3">
           <Stat label="Floor" value={fmtSol(floor?.floorSol)} />
@@ -182,7 +283,6 @@ export default function LookupApp() {
         </div>
       </header>
 
-      {/* Collection toggle */}
       <div className="mb-4 flex flex-wrap justify-center gap-2">
         {TABS.map((t) => {
           const active = collection === t.id;
@@ -193,8 +293,8 @@ export default function LookupApp() {
               onClick={() => onTab(t.id)}
               className={`rounded-full px-4 py-2 font-mono text-xs font-semibold transition sm:text-sm ${
                 active
-                  ? "bg-banana text-ink"
-                  : "border border-border bg-card text-muted hover:border-banana/40 hover:text-banana"
+                  ? "bg-banana text-ink pixel-btn"
+                  : "border-2 border-border bg-wood text-muted hover:border-banana hover:text-banana pixel-btn"
               }`}
             >
               {t.label}
@@ -210,12 +310,12 @@ export default function LookupApp() {
           placeholder="# · mint · wallet · name.sol"
           spellCheck={false}
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-xl border border-border bg-card px-4 py-3 font-mono text-sm text-foreground outline-none ring-banana/40 placeholder:text-muted focus:ring-2"
+          className="min-w-0 flex-1 rounded-none border-2 border-border bg-wood px-4 py-3 font-mono text-sm text-foreground outline-none ring-banana/40 placeholder:text-muted focus:border-banana focus:ring-2"
         />
         <button
           type="submit"
           disabled={loading || !q.trim()}
-          className="rounded-xl bg-banana px-5 py-3 font-semibold text-ink transition hover:brightness-110 disabled:opacity-50"
+          className="rounded-none border-2 border-black bg-banana px-5 py-3 font-pixel text-[10px] font-semibold text-ink pixel-btn hover:brightness-110 disabled:opacity-50 sm:text-xs"
         >
           {loading ? "…" : "Lookup"}
         </button>
@@ -223,28 +323,20 @@ export default function LookupApp() {
 
       <div className="mb-6 flex flex-wrap gap-2">
         {examples.map((ex) => (
-          <button
-            key={ex}
-            type="button"
-            onClick={() => {
-              setQ(ex);
-              void run(ex, collection);
-            }}
+          <Link
+            key={ex.href}
+            href={ex.href}
             className="rounded-lg border border-border bg-card px-3 py-1.5 font-mono text-xs text-muted hover:border-banana/40 hover:text-banana"
           >
-            #{ex}
-          </button>
+            {ex.label}
+          </Link>
         ))}
-        <button
-          type="button"
-          onClick={() => {
-            setQ("toly.sol");
-            void run("toly.sol", collection);
-          }}
+        <Link
+          href="/?q=toly.sol&collection=all"
           className="rounded-lg border border-border bg-card px-3 py-1.5 font-mono text-xs text-muted hover:border-banana/40 hover:text-banana"
         >
           toly.sol
-        </button>
+        </Link>
       </div>
 
       {err && (
@@ -255,8 +347,7 @@ export default function LookupApp() {
 
       {data?.resolvedDomain && (
         <p className="mb-3 font-mono text-xs text-muted">
-          SNS{" "}
-          <span className="text-banana">{data.resolvedDomain}</span>
+          SNS <span className="text-banana">{data.resolvedDomain}</span>
           {data.resolvedWallet && (
             <>
               {" → "}
@@ -274,22 +365,61 @@ export default function LookupApp() {
       )}
 
       {primary && (
-        <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-xl shadow-black/40">
+        <article className="pixel-frame overflow-hidden rounded-none border-2 border-banana bg-card">
           <div className="grid gap-0 sm:grid-cols-[240px_1fr]">
             <div className="relative aspect-square bg-ink">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={primary.image || rarity?.image || ""}
-                alt={primary.name}
-                className="h-full w-full object-cover"
-                style={{ imageRendering: "pixelated" }}
-              />
+              {primaryHref ? (
+                <Link href={primaryHref} className="block h-full w-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={primary.image || rarity?.image || ""}
+                    alt={primary.name}
+                    className="pixel-img h-full w-full object-cover"
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                </Link>
+              ) : (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={primary.image || rarity?.image || ""}
+                    alt={primary.name}
+                    className="pixel-img h-full w-full object-cover"
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                </>
+              )}
+              {primary.mint === HOUSE_MONKE.mint && (
+                <Link
+                  href={HOUSE_MONKE.href}
+                  className="absolute bottom-2 left-2 border-2 border-black bg-banana px-2 py-1 font-pixel text-[8px] text-ink"
+                >
+                  HOUSE
+                </Link>
+              )}
             </div>
             <div className="flex flex-col gap-3 p-5">
               <div>
                 <h2 className="font-pixel text-xl text-banana sm:text-2xl">
-                  {primary.name}
+                  {primaryHref ? (
+                    <Link href={primaryHref} className="hover:underline">
+                      {primary.name}
+                    </Link>
+                  ) : (
+                    primary.name
+                  )}
                 </h2>
+                {primaryHref && (
+                  <p className="mt-1 font-mono text-[11px] text-muted">
+                    deeplink{" "}
+                    <Link
+                      href={primaryHref}
+                      className="text-banana hover:underline"
+                    >
+                      monke.bar{primaryHref}
+                    </Link>
+                  </p>
+                )}
                 {rarity?.rank != null && (
                   <p className="mt-1 font-mono text-sm text-muted">
                     HowRare rank{" "}
@@ -393,11 +523,6 @@ export default function LookupApp() {
                         <div className="truncate text-sm text-foreground">
                           {String(a.value)}
                         </div>
-                        {"rarity" in a && a.rarity != null && (
-                          <div className="font-mono text-[10px] text-banana/80">
-                            {String(a.rarity)}%
-                          </div>
-                        )}
                       </li>
                     ))}
                   </ul>
@@ -414,29 +539,28 @@ export default function LookupApp() {
             {data?.kind === "sns" ? "SNS" : "Wallet"} monkes ({gallery.length})
           </h3>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {gallery.map((m) => (
-              <li key={m.mint}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQ(m.mint);
-                    void run(m.mint, collection);
-                  }}
-                  className="w-full overflow-hidden rounded-xl border border-border bg-card text-left transition hover:border-banana/50"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={m.image}
-                    alt={m.name}
-                    className="aspect-square w-full object-cover"
-                    style={{ imageRendering: "pixelated" }}
-                  />
-                  <div className="px-2 py-2 font-mono text-xs text-foreground">
-                    {m.name}
-                  </div>
-                </button>
-              </li>
-            ))}
+            {gallery.map((m) => {
+              const href = monkeHref(m, collection);
+              return (
+                <li key={m.mint}>
+                  <Link
+                    href={href}
+                    className="block w-full overflow-hidden rounded-xl border border-border bg-card text-left transition hover:border-banana/50"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={m.image}
+                      alt={m.name}
+                      className="aspect-square w-full object-cover"
+                      style={{ imageRendering: "pixelated" }}
+                    />
+                    <div className="px-2 py-2 font-mono text-xs text-foreground">
+                      {m.name}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
@@ -458,6 +582,7 @@ export default function LookupApp() {
             # index partial ({data.indexCount.toLocaleString()} known)
           </span>
         )}
+        <div className="bar-rail mx-auto mb-4 mt-6 w-full max-w-sm" />
         <p className="mt-3">
           Made with 💚{" "}
           <a
@@ -469,16 +594,35 @@ export default function LookupApp() {
             metasal.xyz
           </a>
           {" · "}
-          my monke{" "}
+          house monke{" "}
+          <Link
+            href={HOUSE_MONKE.href}
+            className="text-banana hover:underline"
+            title={`${HOUSE_MONKE.name} → ${HOUSE_MONKE.href}`}
+          >
+            {HOUSE_MONKE.name}
+          </Link>
+          {" · "}
           <a
-            href="https://solscan.io/token/85kc8h9QjHbwahhaYB5Funx9cjXnQE3zJX1HdeJQBgWu"
+            href={HOUSE_MONKE.solscan}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-banana hover:underline"
+            className="text-muted hover:text-banana hover:underline"
           >
-            SMB Gen3 #12192
+            solscan
           </a>
         </p>
+        <p className="mt-2">
+          <Link
+            href={HOUSE_MONKE.href}
+            className="inline-block border-2 border-banana bg-wood px-3 py-2 font-pixel text-[9px] text-banana pixel-btn"
+          >
+            ★ OPEN HOUSE MONKE ★
+          </Link>
+        </p>
+        {deeplinkPath ? (
+          <span className="sr-only">path {deeplinkPath}</span>
+        ) : null}
       </footer>
     </div>
   );

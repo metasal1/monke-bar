@@ -19,14 +19,14 @@ const pixel = Press_Start_2P({
 });
 
 export const metadata: Metadata = {
-  title: "monke.bar — Solana Monke Lookup",
+  title: "monke.bar — THE MONKE BAR",
   description:
-    "Lookup Solana Monkey Business (SMB Gen2) by monke #, mint, or wallet. Floor, rarity, owner.",
+    "Pixel Solana Monkey Business bar. Lookup Gen2 / Gen3 / Barrel by #, mint, wallet, or SNS. House monke: SMB Gen3 #12192.",
   metadataBase: new URL("https://monke.bar"),
   openGraph: {
-    title: "monke.bar — Solana Monke Lookup",
+    title: "monke.bar — THE MONKE BAR",
     description:
-      "SMB Gen2 lookup: monke #, mint, wallet. Floor + HowRare + owner.",
+      "SMB Gen2 · Gen3 · Barrel lookup. House monke SMB Gen3 #12192.",
     url: "https://monke.bar",
     siteName: "monke.bar",
     type: "website",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary",
     title: "monke.bar",
-    description: "Solana Monke NFT collection lookup",
+    description: "THE MONKE BAR — Solana monke lookup",
   },
 };
 
