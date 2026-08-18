@@ -36,7 +36,7 @@ export function looksLikeSns(q: string): boolean {
  * Accepts: "toly", "toly.sol", "sub.parent.sol"
  */
 export async function resolveSns(raw: string): Promise<SnsResolveResult> {
-  let domain = raw.trim().toLowerCase().replace(/^@/, "");
+  const domain = raw.trim().toLowerCase().replace(/^@/, "");
   if (!domain) throw new Error("Empty domain");
 
   const display = domain.endsWith(".sol") ? domain : `${domain}.sol`;
