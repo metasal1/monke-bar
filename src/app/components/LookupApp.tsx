@@ -256,32 +256,35 @@ export default function LookupApp({
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 pb-16 pt-8 sm:px-6">
-      <header className="mb-8 text-center">
-        <div className="bar-sign mx-auto mb-4 inline-block px-5 py-3">
+      <header className="mb-7 text-center">
+        <div className="bar-sign mx-auto mb-5 inline-block px-4 py-2.5 sm:px-6 sm:py-3">
           <Link
             href={HOUSE_MONKE.href}
-            className="text-pixel-xs text-banana hover:underline sm:text-xs"
+            className="text-[10px] leading-relaxed text-banana hover:underline sm:text-[12px]"
             title={HOUSE_MONKE.name}
           >
             ★ THE MONKE BAR ★
           </Link>
         </div>
+        <h1 className="text-[18px] leading-tight tracking-tight text-banana sm:text-[26px]">
+          SOLANA MONKE
+        </h1>
+        <p className="mt-3 text-[10px] leading-relaxed text-muted sm:text-[11px]">
+          Gen2 · Gen3 · Barrel
+        </p>
+        <p className="mt-1 text-[10px] leading-relaxed text-muted/80 sm:text-[11px]">
+          # · mint · wallet · .sol
+        </p>
         <Link
           href={HOUSE_MONKE.href}
-          className="mb-3 inline-flex items-center gap-2 rounded-none border-2 border-banana bg-wood px-3 py-1 text-pixel-xs text-banana pixel-btn"
-          title={`House monke ${HOUSE_MONKE.name}`}
+          className="mt-4 inline-flex items-center gap-2 rounded-none border-2 border-banana/70 bg-wood px-3 py-2 text-[10px] text-banana pixel-btn hover:border-banana"
+          title={HOUSE_MONKE.name}
         >
           monke.bar
           <span className="text-muted">·</span>
           <span className="text-neon">{HOUSE_MONKE.name}</span>
         </Link>
-        <h1 className="text-pixel-xl tracking-tight text-banana sm:text-[28px]">
-          SOLANA MONKE
-        </h1>
-        <p className="mt-2 text-pixel-xs text-muted sm:text-sm">
-          Pixel PFP bar · Gen2 · Gen3 · Barrel · # · mint · wallet · .sol
-        </p>
-        <div className="bar-rail mx-auto mt-4 w-full max-w-md" />
+        <div className="bar-rail mx-auto mt-5 w-full max-w-md" />
 
         <div className="mt-5 grid grid-cols-3 gap-2 text-left sm:gap-3">
           <Stat label="Floor" value={fmtSol(floor?.floorSol)} />
@@ -303,7 +306,7 @@ export default function LookupApp({
               key={t.id}
               type="button"
               onClick={() => onTab(t.id)}
-              className={`rounded-full px-4 py-2 text-pixel-xs font-semibold transition sm:text-sm ${
+              className={`rounded-none px-3 py-2.5 text-[10px] font-semibold transition sm:px-4 sm:text-[11px] ${
                 active
                   ? "bg-banana text-ink pixel-btn"
                   : "border-2 border-border bg-wood text-muted hover:border-banana hover:text-banana pixel-btn"
@@ -316,7 +319,7 @@ export default function LookupApp({
       </div>
 
       {(meCollectionUrl(collection) || tensorCollectionUrl(collection)) && (
-        <div className="mb-4 flex flex-wrap justify-center gap-3 text-pixel-xs">
+        <div className="mb-4 flex flex-wrap justify-center gap-2 text-[10px]">
           {meCollectionUrl(collection) && (
             <a
               href={meCollectionUrl(collection)!}
@@ -368,7 +371,7 @@ export default function LookupApp({
         <button
           type="submit"
           disabled={loading || !q.trim()}
-          className="rounded-none border-2 border-black bg-banana px-5 py-3 text-pixel-xs font-semibold text-ink pixel-btn hover:brightness-110 disabled:opacity-50 sm:text-xs"
+          className="rounded-none border-2 border-black bg-banana px-5 py-3.5 text-[11px] font-semibold text-ink pixel-btn hover:brightness-110 disabled:opacity-50"
         >
           {loading ? "…" : "Lookup"}
         </button>
@@ -379,14 +382,14 @@ export default function LookupApp({
           <Link
             key={ex.href}
             href={ex.href}
-            className="rounded-lg border border-border bg-card px-3 py-1.5 text-pixel-xs text-muted hover:border-banana/40 hover:text-banana"
+            className="rounded-none border-2 border-border bg-card px-3 py-2 text-[10px] text-muted hover:border-banana/40 hover:text-banana"
           >
             {ex.label}
           </Link>
         ))}
         <Link
           href="/?q=toly.sol&collection=all"
-          className="rounded-lg border border-border bg-card px-3 py-1.5 text-pixel-xs text-muted hover:border-banana/40 hover:text-banana"
+          className="rounded-none border-2 border-border bg-card px-3 py-2 text-[10px] text-muted hover:border-banana/40 hover:text-banana"
         >
           toly.sol
         </Link>
@@ -442,18 +445,10 @@ export default function LookupApp({
                   />
                 </>
               )}
-              {primary.mint === HOUSE_MONKE.mint && (
-                <Link
-                  href={HOUSE_MONKE.href}
-                  className="absolute bottom-2 left-2 border-2 border-black bg-banana px-2 py-1 text-pixel-xs text-ink"
-                >
-                  HOUSE
-                </Link>
-              )}
             </div>
             <div className="flex flex-col gap-3 p-5">
               <div>
-                <h2 className="text-pixel-lg text-banana sm:text-[18px]">
+                <h2 className="text-[14px] leading-snug text-banana sm:text-[16px]">
                   {primaryHref ? (
                     <Link href={primaryHref} className="hover:underline">
                       {primary.name}
@@ -464,32 +459,12 @@ export default function LookupApp({
                 </h2>
                 {primaryHref && (
                   <p className="mt-1 text-pixel-xs text-muted">
-                    deeplink{" "}
-                    <Link
+                                        <Link
                       href={primaryHref}
                       className="text-banana hover:underline"
                     >
                       monke.bar{primaryHref}
                     </Link>
-                  </p>
-                )}
-                {rarity?.rank != null && (
-                  <p className="mt-1 text-pixel-sm text-muted">
-                    HowRare rank{" "}
-                    <span className="text-foreground">#{rarity.rank}</span>
-                    {rarity.link && (
-                      <>
-                        {" · "}
-                        <a
-                          href={rarity.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-banana underline-offset-2 hover:underline"
-                        >
-                          howrare
-                        </a>
-                      </>
-                    )}
                   </p>
                 )}
               </div>
@@ -600,7 +575,7 @@ export default function LookupApp({
 
       {gallery.length > 0 && (
         <section className="mt-8">
-          <h3 className="mb-3 text-pixel-md text-banana">
+          <h3 className="mb-3 text-[12px] text-banana sm:text-[14px]">
             {data?.kind === "sns" ? "SNS" : "Wallet"} monkes ({gallery.length})
           </h3>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -619,7 +594,7 @@ export default function LookupApp({
                       className="aspect-square w-full object-cover"
                       style={{ imageRendering: "pixelated" }}
                     />
-                    <div className="px-2 py-2 text-pixel-xs text-foreground">
+                    <div className="px-2 py-2 text-[9px] leading-snug text-foreground">
                       {m.name}
                     </div>
                   </Link>
@@ -630,9 +605,9 @@ export default function LookupApp({
         </section>
       )}
 
-      <footer className="mt-auto pt-12 text-center text-pixel-xs text-muted">
+      <footer className="mt-auto pt-12 text-center text-[10px] leading-relaxed text-muted">
         <p>
-          Unofficial · Helius + HowRare + Magic Eden + SNS ·{" "}
+          Unofficial · Helius · Magic Eden · Tensor · SNS ·{" "}
           <a
             href="https://solanamonkey.business/"
             target="_blank"
@@ -643,7 +618,7 @@ export default function LookupApp({
           </a>
         </p>
         {data?.indexPartial && data.indexCount != null && (
-          <span className="mt-1 block text-[10px] opacity-70">
+          <span className="mt-1 block text-[9px] opacity-70">
             # index partial ({data.indexCount.toLocaleString()} known)
           </span>
         )}
@@ -659,30 +634,12 @@ export default function LookupApp({
             metasal.xyz
           </a>
           {" · "}
-          house monke{" "}
           <Link
             href={HOUSE_MONKE.href}
             className="text-banana hover:underline"
-            title={`${HOUSE_MONKE.name} → ${HOUSE_MONKE.href}`}
+            title={HOUSE_MONKE.name}
           >
             {HOUSE_MONKE.name}
-          </Link>
-          {" · "}
-          <a
-            href={HOUSE_MONKE.solscan}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted hover:text-banana hover:underline"
-          >
-            solscan
-          </a>
-        </p>
-        <p className="mt-2">
-          <Link
-            href={HOUSE_MONKE.href}
-            className="inline-block border-2 border-banana bg-wood px-3 py-2 text-pixel-xs text-banana pixel-btn"
-          >
-            ★ OPEN HOUSE MONKE ★
           </Link>
         </p>
         {deeplinkPath ? (
@@ -695,11 +652,13 @@ export default function LookupApp({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-card px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wider text-muted">
+    <div className="rounded-none border-2 border-border bg-card px-2 py-2 sm:px-3">
+      <div className="text-[8px] uppercase tracking-wider text-muted sm:text-[9px]">
         {label}
       </div>
-      <div className="text-pixel-sm text-banana sm:text-base">{value}</div>
+      <div className="mt-1 text-[10px] leading-tight text-banana sm:text-[12px]">
+        {value}
+      </div>
     </div>
   );
 }
@@ -707,8 +666,8 @@ function Stat({ label, value }: { label: string; value: string }) {
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div className="flex gap-3 border-b border-border/60 pb-2 last:border-0">
-      <dt className="w-16 shrink-0 text-muted">{k}</dt>
-      <dd className="min-w-0 break-all">{v}</dd>
+      <dt className="w-14 shrink-0 text-[10px] text-muted sm:w-16">{k}</dt>
+      <dd className="min-w-0 break-all text-[10px] sm:text-[11px]">{v}</dd>
     </div>
   );
 }

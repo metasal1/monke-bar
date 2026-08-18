@@ -13,18 +13,27 @@ export const alt = "monke.bar";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-async function loadMonkeImage(url: string): Promise<ArrayBuffer | null> {
-  if (!url) return null;
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "monke.bar-og/1.0" },
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return null;
-    return await res.arrayBuffer();
-  } catch {
-    return null;
+async function loadPixelFont(): Promise<ArrayBuffer> {
+  const bases = [
+    "https://monke-bar.gm-4e8.workers.dev",
+    "https://monke.bar",
+    process.env.NEXT_PUBLIC_SITE_URL,
+  ].filter(Boolean) as string[];
+  for (const base of bases) {
+    try {
+      const res = await fetch(`${base}/fonts/PressStart2P-Regular.ttf`, {
+        next: { revalidate: 86400 },
+      });
+      if (res.ok) return await res.arrayBuffer();
+    } catch {
+      /* next */
+    }
   }
+  const res = await fetch(
+    "https://github.com/google/fonts/raw/main/ofl/pressstart2p/PressStart2P-Regular.ttf"
+  );
+  if (!res.ok) throw new Error("pixel font fetch failed");
+  return res.arrayBuffer();
 }
 
 export default async function Image({
@@ -32,42 +41,35 @@ export default async function Image({
 }: {
   params: Promise<{ collection: string; id: string }>;
 }) {
+  const fontData = await loadPixelFont();
   const { collection, id } = await params;
-  const valid =
-    isPathCollection(collection) && /^\d{1,5}$/.test(id);
+  const valid = isPathCollection(collection) && /^\d{1,5}$/.test(id);
   const col = valid
     ? PATH_TO_COLLECTION[collection as PathCollection]
-    : "smb_gen2";
+    : "smb_gen3";
   const num = valid ? Number(id) : HOUSE_MONKE.number;
-  const rarity = valid ? await howrareByNumber(col, num) : null;
-  const name = rarity?.name ||
+  const rarity = await howrareByNumber(col, num);
+  const name =
+    rarity?.name ||
     (valid
       ? `${COLLECTIONS[col].numberPrefix} #${id}`
       : HOUSE_MONKE.name);
   const deeplink = valid
     ? `monke.bar/${collection}/${id}`
     : `monke.bar${HOUSE_MONKE.href}`;
-  const rank =
-    rarity?.rank != null ? `HowRare #${rarity.rank}` : "SMB lookup";
 
-  let imgSrc: string | null = rarity?.image || null;
-  // absolute URL for external images in ImageResponse
-  if (imgSrc && imgSrc.startsWith("http")) {
-    // keep
-  } else if (!imgSrc) {
-    imgSrc = null;
-  }
-
-  // Prefer data URL buffer when fetch works (more reliable on Workers)
   let dataUrl: string | null = null;
-  if (imgSrc) {
-    const buf = await loadMonkeImage(imgSrc);
-    if (buf) {
-      const b64 = Buffer.from(buf).toString("base64");
-      const ct = imgSrc.includes("irys") || imgSrc.includes("arweave")
-        ? "image/png"
-        : "image/png";
-      dataUrl = `data:${ct};base64,${b64}`;
+  if (rarity?.image) {
+    try {
+      const res = await fetch(rarity.image, {
+        headers: { "User-Agent": "monke.bar-og/1.0" },
+        next: { revalidate: 3600 },
+      });
+      if (res.ok) {
+        dataUrl = `data:image/png;base64,${Buffer.from(await res.arrayBuffer()).toString("base64")}`;
+      }
+    } catch {
+      /* ignore */
     }
   }
 
@@ -81,19 +83,19 @@ export default async function Image({
           flexDirection: "column",
           background: "#0a0705",
           color: "#f6edd8",
-          fontFamily: "monospace",
+          fontFamily: "PressStart",
         }}
       >
         <div
           style={{
             display: "flex",
-            height: 72,
+            height: 64,
             background: "#2a1a10",
             borderBottom: "6px solid #4a3422",
             alignItems: "center",
             justifyContent: "center",
             color: "#ffd84d",
-            fontSize: 28,
+            fontSize: 20,
             letterSpacing: 2,
           }}
         >
@@ -104,40 +106,34 @@ export default async function Image({
             display: "flex",
             flex: 1,
             padding: 40,
-            gap: 36,
+            gap: 32,
             alignItems: "center",
           }}
         >
           <div
             style={{
               display: "flex",
-              width: 320,
-              height: 320,
+              width: 300,
+              height: 300,
               background: "#1a120c",
               border: "6px solid #ffd84d",
-              boxShadow: "10px 10px 0 #000",
+              boxShadow: "8px 8px 0 #000",
               alignItems: "center",
               justifyContent: "center",
               overflow: "hidden",
             }}
           >
-            {dataUrl || imgSrc ? (
+            {dataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={dataUrl || imgSrc!}
-                width={308}
-                height={308}
+                src={dataUrl}
+                width={288}
+                height={288}
                 style={{ objectFit: "cover", imageRendering: "pixelated" }}
               />
             ) : (
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 48,
-                  color: "#ffd84d",
-                }}
-              >
-                🐵
+              <div style={{ display: "flex", fontSize: 28, color: "#ffd84d" }}>
+                SMB
               </div>
             )}
           </div>
@@ -146,26 +142,19 @@ export default async function Image({
               display: "flex",
               flexDirection: "column",
               flex: 1,
-              gap: 18,
+              gap: 16,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                fontSize: 22,
-                color: "#a89278",
-                letterSpacing: 2,
-              }}
-            >
-              monke.bar deeplink
+            <div style={{ display: "flex", fontSize: 14, color: "#a89278" }}>
+              monke.bar
             </div>
             <div
               style={{
                 display: "flex",
-                fontSize: 52,
+                fontSize: 28,
                 color: "#ffd84d",
-                lineHeight: 1.15,
-                textShadow: "4px 4px 0 #000",
+                lineHeight: 1.25,
+                textShadow: "3px 3px 0 #000",
               }}
             >
               {name}
@@ -173,54 +162,47 @@ export default async function Image({
             <div
               style={{
                 display: "flex",
-                fontSize: 28,
-                color: "#39ff14",
-              }}
-            >
-              {rank}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                marginTop: 12,
-                padding: "14px 18px",
+                marginTop: 8,
+                padding: "12px 14px",
                 background: "#2a1a10",
                 border: "4px solid #ffd84d",
                 color: "#ffd84d",
-                fontSize: 26,
-                letterSpacing: 1,
+                fontSize: 14,
               }}
             >
               {deeplink}
             </div>
-            <div
-              style={{
-                display: "flex",
-                fontSize: 20,
-                color: "#a89278",
-                marginTop: 8,
-              }}
-            >
-              Tensor · Magic Eden · Gen2 Gen3 Barrel
+            <div style={{ display: "flex", fontSize: 12, color: "#a89278" }}>
+              Gen2 · Gen3 · Barrel
             </div>
           </div>
         </div>
         <div
           style={{
             display: "flex",
-            height: 56,
+            height: 48,
             background: "#2a1a10",
             borderTop: "6px solid #4a3422",
             alignItems: "center",
             justifyContent: "center",
             color: "#a89278",
-            fontSize: 20,
+            fontSize: 12,
           }}
         >
           Made with love · metasal.xyz
         </div>
       </div>
     ),
-    { ...size }
+    {
+      ...size,
+      fonts: [
+        {
+          name: "PressStart",
+          data: fontData,
+          style: "normal",
+          weight: 400,
+        },
+      ],
+    }
   );
 }

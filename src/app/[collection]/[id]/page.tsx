@@ -1,12 +1,12 @@
-import LookupApp from "@/app/components/LookupApp";
+import type { Metadata } from "next";
+import { howrareByNumber } from "@/lib/howrare";
 import {
   isPathCollection,
   PATH_TO_COLLECTION,
   type PathCollection,
 } from "@/lib/deeplink";
 import { COLLECTIONS } from "@/lib/collections";
-import { howrareByNumber } from "@/lib/howrare";
-import type { Metadata } from "next";
+import LookupApp from "@/app/components/LookupApp";
 import { notFound } from "next/navigation";
 
 type Props = { params: Promise<{ collection: string; id: string }> };
@@ -22,9 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     rarity?.name || `${COLLECTIONS[col].numberPrefix} #${id}`;
   const path = `/${collection}/${id}`;
   const url = `https://monke.bar${path}`;
-  const desc = rarity?.rank
-    ? `${name} · HowRare #${rarity.rank} · open on monke.bar`
-    : `${name} on Solana Monkey Business · open on monke.bar`;
+  const desc = `${name} on Solana Monkey Business · monke.bar`;
 
   return {
     title: name,
@@ -36,7 +34,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url,
       siteName: "monke.bar",
       type: "website",
-      // Dynamic opengraph-image.tsx on this segment; keep explicit deeplink url
     },
     twitter: {
       card: "summary_large_image",

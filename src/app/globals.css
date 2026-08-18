@@ -37,8 +37,8 @@ html {
 
 body {
   font-family: var(--font-pixel), ui-monospace, monospace;
-  letter-spacing: 0.04em;
-  line-height: 1.7;
+  letter-spacing: 0.03em;
+  line-height: 1.65;
   background-color: var(--background);
   background-image:
     linear-gradient(180deg, rgba(255, 216, 77, 0.06) 0%, transparent 28%),
@@ -92,7 +92,10 @@ li {
 }
 
 .font-pixel {
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
+}
+
+h1, h2, .bar-sign {
   text-shadow: 2px 2px 0 #000;
 }
 

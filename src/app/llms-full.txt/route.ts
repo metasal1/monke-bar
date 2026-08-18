@@ -24,7 +24,7 @@ Unofficial Solana Monkey Business lookup tool.
 - Magic Eden item: https://magiceden.io/item-details/{mint}?utm_source=metasal&utm_medium=referral&utm_campaign=monke.bar
 - Magic Eden market: https://magiceden.io/marketplace/{symbol}?utm_source=metasal&utm_medium=referral&utm_campaign=monke.bar
 
-## House monke
+## Metasal monke
 - SMB Gen3 #12192
 - https://monke.bar/gen3/12192
 - mint 85kc8h9QjHbwahhaYB5Funx9cjXnQE3zJX1HdeJQBgWu

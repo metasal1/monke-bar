@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s · monke.bar",
   },
   description:
-    "Pixel Solana Monkey Business bar. Lookup SMB Gen2, Gen3, and Barrel by monke #, mint, wallet, or SNS (.sol). Floor, rarity, owner. Trade on Tensor + Magic Eden.",
+    "Pixel Solana Monkey Business bar. Lookup SMB Gen2, Gen3, and Barrel by monke #, mint, wallet, or SNS (.sol). Floor, owner. Trade on Tensor + Magic Eden.",
   metadataBase: new URL(SITE),
   applicationName: "monke.bar",
   keywords: [
@@ -30,7 +30,6 @@ export const metadata: Metadata = {
     "SMB Barrel",
     "Solana NFT",
     "monke.bar",
-    "HowRare",
     "Magic Eden",
     "Tensor",
     "NFT lookup",
@@ -46,14 +45,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "monke.bar — THE MONKE BAR",
     description:
-      "SMB Gen2 · Gen3 · Barrel lookup. House monke SMB Gen3 #12192. Tensor + Magic Eden.",
+      "SMB Gen2 · Gen3 · Barrel lookup. SMB Gen3 #12192 · Tensor + Magic Eden.",
     url: SITE,
     siteName: "monke.bar",
     type: "website",
     locale: "en_AU",
     images: [
       {
-        url: "/images/opengraph.png?v=2",
+        url: "/images/opengraph.png?v=3",
         width: 1200,
         height: 630,
         alt: "THE MONKE BAR — monke.bar",
@@ -65,7 +64,7 @@ export const metadata: Metadata = {
     title: "monke.bar — THE MONKE BAR",
     description: "Solana monke NFT lookup · Gen2 Gen3 Barrel",
     creator: "@metasal",
-    images: ["/images/opengraph.png?v=2"],
+    images: ["/images/opengraph.png?v=3"],
   },
   robots: {
     index: true,

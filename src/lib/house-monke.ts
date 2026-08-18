@@ -1,4 +1,4 @@
-/** Metasal house monke — every brand surface deep-links here */
+/** Metasal monke — brand surfaces deep-link here */
 export const HOUSE_MONKE = {
   collection: "smb_gen3" as const,
   pathCollection: "gen3" as const,

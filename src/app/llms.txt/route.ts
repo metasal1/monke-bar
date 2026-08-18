@@ -7,7 +7,7 @@ const BODY = `# monke.bar
 
 ## Site
 - Home: https://monke.bar/
-- House monke: https://monke.bar/gen3/12192
+- Metasal monke: https://monke.bar/gen3/12192
 - Full LLM notes: https://monke.bar/llms-full.txt
 
 ## Deeplinks
@@ -22,13 +22,12 @@ const BODY = `# monke.bar
 
 ## Data sources
 - Helius DAS
-- HowRare (Gen2/Gen3 indexes)
+- Collection mint indexes
 - Magic Eden floor stats
 - SNS (Bonfida)
 
 ## Maker
 - https://metasal.xyz
-- Made with 💚 metasal.xyz
 `;
 
 export function GET() {
