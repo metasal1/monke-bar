@@ -1,21 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Press_Start_2P } from "next/font/google";
+import { Press_Start_2P } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 const pixel = Press_Start_2P({
   variable: "--font-pixel",
   weight: "400",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -39,7 +30,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0c0a08",
+  themeColor: "#0a0705",
   colorScheme: "dark",
 };
 
@@ -49,12 +40,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${pixel.variable} antialiased`}
-      >
-        {children}
-      </body>
+    <html lang="en" className={pixel.variable}>
+      <body className={pixel.className}>{children}</body>
     </html>
   );
 }
