@@ -442,20 +442,33 @@ export default function LookupApp() {
       )}
 
       <footer className="mt-auto pt-12 text-center font-mono text-[11px] text-muted">
-        Unofficial · Helius + HowRare + Magic Eden + SNS ·{" "}
-        <a
-          href="https://solanamonkey.business/"
-          target="_blank"
-          rel="noreferrer"
-          className="text-banana/80 hover:underline"
-        >
-          solanamonkey.business
-        </a>
+        <p>
+          Unofficial · Helius + HowRare + Magic Eden + SNS ·{" "}
+          <a
+            href="https://solanamonkey.business/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-banana/80 hover:underline"
+          >
+            solanamonkey.business
+          </a>
+        </p>
         {data?.indexPartial && data.indexCount != null && (
           <span className="mt-1 block text-[10px] opacity-70">
             # index partial ({data.indexCount.toLocaleString()} known)
           </span>
         )}
+        <p className="mt-3">
+          Made with 💚{" "}
+          <a
+            href="https://metasal.xyz"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-banana hover:underline"
+          >
+            metasal.xyz
+          </a>
+        </p>
       </footer>
     </div>
   );
