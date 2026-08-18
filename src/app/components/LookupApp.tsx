@@ -606,8 +606,6 @@ export default function LookupApp({
         </section>
       )}
 
-      <DonatePanel />
-
       <footer className="mt-auto pt-12 text-center text-[10px] leading-relaxed text-muted">
         <p>
           Unofficial · Helius · Magic Eden · Tensor · SNS ·{" "}
@@ -645,6 +643,7 @@ export default function LookupApp({
             {HOUSE_MONKE.name}
           </Link>
         </p>
+        <DonatePanel />
         {deeplinkPath ? (
           <span className="sr-only">path {deeplinkPath}</span>
         ) : null}
