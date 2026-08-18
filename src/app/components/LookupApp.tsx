@@ -248,7 +248,7 @@ export default function LookupApp({
         <div className="bar-sign mx-auto mb-4 inline-block px-5 py-3">
           <Link
             href={HOUSE_MONKE.href}
-            className="font-pixel text-[10px] text-banana hover:underline sm:text-xs"
+            className="text-pixel-xs text-banana hover:underline sm:text-xs"
             title={HOUSE_MONKE.name}
           >
             ★ THE MONKE BAR ★
@@ -256,17 +256,17 @@ export default function LookupApp({
         </div>
         <Link
           href={HOUSE_MONKE.href}
-          className="mb-3 inline-flex items-center gap-2 rounded-none border-2 border-banana bg-wood px-3 py-1 font-mono text-xs text-banana pixel-btn"
+          className="mb-3 inline-flex items-center gap-2 rounded-none border-2 border-banana bg-wood px-3 py-1 text-pixel-xs text-banana pixel-btn"
           title={`House monke ${HOUSE_MONKE.name}`}
         >
           monke.bar
           <span className="text-muted">·</span>
           <span className="text-neon">{HOUSE_MONKE.name}</span>
         </Link>
-        <h1 className="font-pixel text-2xl tracking-tight text-banana sm:text-4xl">
+        <h1 className="text-pixel-xl tracking-tight text-banana sm:text-[28px]">
           SOLANA MONKE
         </h1>
-        <p className="mt-2 font-mono text-xs text-muted sm:text-sm">
+        <p className="mt-2 text-pixel-xs text-muted sm:text-sm">
           Pixel PFP bar · Gen2 · Gen3 · Barrel · # · mint · wallet · .sol
         </p>
         <div className="bar-rail mx-auto mt-4 w-full max-w-md" />
@@ -291,7 +291,7 @@ export default function LookupApp({
               key={t.id}
               type="button"
               onClick={() => onTab(t.id)}
-              className={`rounded-full px-4 py-2 font-mono text-xs font-semibold transition sm:text-sm ${
+              className={`rounded-full px-4 py-2 text-pixel-xs font-semibold transition sm:text-sm ${
                 active
                   ? "bg-banana text-ink pixel-btn"
                   : "border-2 border-border bg-wood text-muted hover:border-banana hover:text-banana pixel-btn"
@@ -310,12 +310,12 @@ export default function LookupApp({
           placeholder="# · mint · wallet · name.sol"
           spellCheck={false}
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-none border-2 border-border bg-wood px-4 py-3 font-mono text-sm text-foreground outline-none ring-banana/40 placeholder:text-muted focus:border-banana focus:ring-2"
+          className="min-w-0 flex-1 rounded-none border-2 border-border bg-wood px-4 py-3 text-pixel-sm text-foreground outline-none ring-banana/40 placeholder:text-muted focus:border-banana focus:ring-2"
         />
         <button
           type="submit"
           disabled={loading || !q.trim()}
-          className="rounded-none border-2 border-black bg-banana px-5 py-3 font-pixel text-[10px] font-semibold text-ink pixel-btn hover:brightness-110 disabled:opacity-50 sm:text-xs"
+          className="rounded-none border-2 border-black bg-banana px-5 py-3 text-pixel-xs font-semibold text-ink pixel-btn hover:brightness-110 disabled:opacity-50 sm:text-xs"
         >
           {loading ? "…" : "Lookup"}
         </button>
@@ -326,14 +326,14 @@ export default function LookupApp({
           <Link
             key={ex.href}
             href={ex.href}
-            className="rounded-lg border border-border bg-card px-3 py-1.5 font-mono text-xs text-muted hover:border-banana/40 hover:text-banana"
+            className="rounded-lg border border-border bg-card px-3 py-1.5 text-pixel-xs text-muted hover:border-banana/40 hover:text-banana"
           >
             {ex.label}
           </Link>
         ))}
         <Link
           href="/?q=toly.sol&collection=all"
-          className="rounded-lg border border-border bg-card px-3 py-1.5 font-mono text-xs text-muted hover:border-banana/40 hover:text-banana"
+          className="rounded-lg border border-border bg-card px-3 py-1.5 text-pixel-xs text-muted hover:border-banana/40 hover:text-banana"
         >
           toly.sol
         </Link>
@@ -346,7 +346,7 @@ export default function LookupApp({
       )}
 
       {data?.resolvedDomain && (
-        <p className="mb-3 font-mono text-xs text-muted">
+        <p className="mb-3 text-pixel-xs text-muted">
           SNS <span className="text-banana">{data.resolvedDomain}</span>
           {data.resolvedWallet && (
             <>
@@ -392,7 +392,7 @@ export default function LookupApp({
               {primary.mint === HOUSE_MONKE.mint && (
                 <Link
                   href={HOUSE_MONKE.href}
-                  className="absolute bottom-2 left-2 border-2 border-black bg-banana px-2 py-1 font-pixel text-[8px] text-ink"
+                  className="absolute bottom-2 left-2 border-2 border-black bg-banana px-2 py-1 text-pixel-xs text-ink"
                 >
                   HOUSE
                 </Link>
@@ -400,7 +400,7 @@ export default function LookupApp({
             </div>
             <div className="flex flex-col gap-3 p-5">
               <div>
-                <h2 className="font-pixel text-xl text-banana sm:text-2xl">
+                <h2 className="text-pixel-lg text-banana sm:text-[18px]">
                   {primaryHref ? (
                     <Link href={primaryHref} className="hover:underline">
                       {primary.name}
@@ -410,7 +410,7 @@ export default function LookupApp({
                   )}
                 </h2>
                 {primaryHref && (
-                  <p className="mt-1 font-mono text-[11px] text-muted">
+                  <p className="mt-1 text-pixel-xs text-muted">
                     deeplink{" "}
                     <Link
                       href={primaryHref}
@@ -421,7 +421,7 @@ export default function LookupApp({
                   </p>
                 )}
                 {rarity?.rank != null && (
-                  <p className="mt-1 font-mono text-sm text-muted">
+                  <p className="mt-1 text-pixel-sm text-muted">
                     HowRare rank{" "}
                     <span className="text-foreground">#{rarity.rank}</span>
                     {rarity.link && (
@@ -441,7 +441,7 @@ export default function LookupApp({
                 )}
               </div>
 
-              <dl className="grid gap-2 font-mono text-xs sm:text-sm">
+              <dl className="grid gap-2 text-pixel-xs sm:text-sm">
                 <Row
                   k="Mint"
                   v={
@@ -535,7 +535,7 @@ export default function LookupApp({
 
       {gallery.length > 0 && (
         <section className="mt-8">
-          <h3 className="mb-3 font-pixel text-lg text-banana">
+          <h3 className="mb-3 text-pixel-md text-banana">
             {data?.kind === "sns" ? "SNS" : "Wallet"} monkes ({gallery.length})
           </h3>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -554,7 +554,7 @@ export default function LookupApp({
                       className="aspect-square w-full object-cover"
                       style={{ imageRendering: "pixelated" }}
                     />
-                    <div className="px-2 py-2 font-mono text-xs text-foreground">
+                    <div className="px-2 py-2 text-pixel-xs text-foreground">
                       {m.name}
                     </div>
                   </Link>
@@ -565,7 +565,7 @@ export default function LookupApp({
         </section>
       )}
 
-      <footer className="mt-auto pt-12 text-center font-mono text-[11px] text-muted">
+      <footer className="mt-auto pt-12 text-center text-pixel-xs text-muted">
         <p>
           Unofficial · Helius + HowRare + Magic Eden + SNS ·{" "}
           <a
@@ -615,7 +615,7 @@ export default function LookupApp({
         <p className="mt-2">
           <Link
             href={HOUSE_MONKE.href}
-            className="inline-block border-2 border-banana bg-wood px-3 py-2 font-pixel text-[9px] text-banana pixel-btn"
+            className="inline-block border-2 border-banana bg-wood px-3 py-2 text-pixel-xs text-banana pixel-btn"
           >
             ★ OPEN HOUSE MONKE ★
           </Link>
@@ -634,7 +634,7 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="text-[10px] uppercase tracking-wider text-muted">
         {label}
       </div>
-      <div className="font-mono text-sm text-banana sm:text-base">{value}</div>
+      <div className="text-pixel-sm text-banana sm:text-base">{value}</div>
     </div>
   );
 }

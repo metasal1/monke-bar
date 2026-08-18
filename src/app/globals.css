@@ -26,12 +26,19 @@
   --color-wood: var(--wood);
   --color-neon: var(--neon);
   --color-bar-red: var(--bar-red);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-pixel), ui-monospace, monospace;
+  --font-mono: var(--font-pixel), ui-monospace, monospace;
   --font-pixel: var(--font-pixel);
 }
 
+html {
+  font-size: 13px;
+}
+
 body {
+  font-family: var(--font-pixel), ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  line-height: 1.7;
   background-color: var(--background);
   background-image:
     linear-gradient(180deg, rgba(255, 216, 77, 0.06) 0%, transparent 28%),
@@ -53,10 +60,38 @@ body {
   color: var(--foreground);
   min-height: 100vh;
   image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth: never;
+  text-rendering: optimizeSpeed;
+}
+
+/* Force pixel face everywhere, including Tailwind font-mono/sans utilities */
+.font-sans,
+.font-mono,
+.font-pixel,
+button,
+input,
+select,
+textarea,
+a,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+div,
+label,
+dt,
+dd,
+li {
+  font-family: var(--font-pixel), ui-monospace, monospace !important;
 }
 
 .font-pixel {
-  font-family: var(--font-pixel), var(--font-mono), ui-monospace, monospace;
   letter-spacing: 0.06em;
   text-shadow: 2px 2px 0 #000;
 }
@@ -101,6 +136,35 @@ body {
   );
   border-top: 2px solid #000;
   border-bottom: 2px solid #000;
+}
+
+/* Readable pixel sizes */
+.text-pixel-xs {
+  font-size: 8px;
+  line-height: 1.8;
+}
+.text-pixel-sm {
+  font-size: 10px;
+  line-height: 1.75;
+}
+.text-pixel-md {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.text-pixel-lg {
+  font-size: 16px;
+  line-height: 1.5;
+  text-shadow: 2px 2px 0 #000;
+}
+.text-pixel-xl {
+  font-size: 22px;
+  line-height: 1.4;
+  text-shadow: 3px 3px 0 #000;
+}
+
+input::placeholder {
+  font-family: var(--font-pixel), ui-monospace, monospace;
+  letter-spacing: 0.04em;
 }
 
 ::selection {
