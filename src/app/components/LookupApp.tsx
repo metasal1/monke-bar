@@ -262,6 +262,18 @@ export default function LookupApp({
     }
   }
 
+  function clearAll() {
+    abortRef.current?.abort();
+    setQ("");
+    setData(null);
+    setErr(null);
+    setLoading(false);
+    setFloor(null);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", "/");
+    }
+  }
+
   const primary = data?.monke || data?.monkes?.[0] || null;
   const gallery =
     data?.monkes && data.monkes.length > 1
@@ -273,54 +285,86 @@ export default function LookupApp({
   const rarity = data?.rarity;
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 pb-12 pt-8 sm:px-6">
-      <header className="mb-5 text-center">
-        <h1 className="text-[20px] leading-tight text-banana sm:text-[22px]">
-          monke.bar
-        </h1>
-        <p className="mt-1 text-[10px] text-muted">Monke lookup</p>
+    <div
+      className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-3 pb-8 pt-4 sm:px-6 sm:pb-12 sm:pt-8"
+      style={{
+        paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
+        paddingLeft: "max(0.75rem, env(safe-area-inset-left))",
+        paddingRight: "max(0.75rem, env(safe-area-inset-right))",
+        paddingTop: "max(1rem, env(safe-area-inset-top))",
+      }}
+    >
+      <header className="mb-4 flex items-start justify-between gap-2 sm:mb-5">
+        <div className="min-w-0 text-left sm:text-center sm:flex-1">
+          <h1 className="text-[18px] leading-tight text-banana sm:text-[22px]">
+            monke.bar
+          </h1>
+          <p className="mt-1 text-[10px] text-muted">Monke lookup</p>
+        </div>
+        <DonatePanel variant="button" className="shrink-0" />
       </header>
 
-      <div className="mb-3 flex flex-wrap justify-center gap-1.5">
-        {TABS.map((t) => {
-          const active = collection === t.id;
+      <div className="mb-3 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none">
+        {TABS.map((tab) => {
+          const active = collection === tab.id;
           return (
             <button
-              key={t.id}
+              key={tab.id}
               type="button"
-              onClick={() => onTab(t.id)}
-              className={`rounded-none px-3 py-2 text-[10px] font-semibold ${
+              onClick={() => onTab(tab.id)}
+              className={`min-h-[44px] shrink-0 rounded-none px-4 py-2.5 text-[11px] font-semibold ${
                 active
                   ? "bg-banana text-ink pixel-btn"
                   : "border-2 border-border bg-wood text-muted hover:border-banana hover:text-banana pixel-btn"
               }`}
             >
-              {t.label}
+              {tab.label}
             </button>
           );
         })}
       </div>
 
-      <form onSubmit={onSubmit} className="mb-5 flex gap-2">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="# · mint · wallet · name.sol"
-          spellCheck={false}
-          autoComplete="off"
-          autoCapitalize="none"
-          autoCorrect="off"
-          enterKeyHint="search"
-          inputMode="search"
-          className="min-w-0 flex-1 rounded-none border-2 border-border bg-wood px-4 py-3.5 text-[16px] text-foreground outline-none placeholder:text-muted focus:border-banana"
-        />
-        <button
-          type="submit"
-          disabled={loading || !q.trim()}
-          className="rounded-none border-2 border-black bg-banana px-4 py-3.5 text-[11px] font-semibold text-ink pixel-btn disabled:opacity-50"
-        >
-          {loading ? "…" : "Go"}
-        </button>
+      <form onSubmit={onSubmit} className="mb-4 flex flex-col gap-2">
+        <div className="relative">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="# · mint · wallet · name.sol"
+            spellCheck={false}
+            autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            enterKeyHint="search"
+            inputMode="search"
+            className="w-full rounded-none border-2 border-border bg-wood px-4 py-3.5 pr-12 text-[16px] text-foreground outline-none placeholder:text-muted focus:border-banana"
+          />
+          {q ? (
+            <button
+              type="button"
+              onClick={() => setQ("")}
+              className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-[14px] text-muted hover:text-banana"
+              aria-label="Clear input"
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="submit"
+            disabled={loading || !q.trim()}
+            className="min-h-[48px] rounded-none border-2 border-black bg-banana px-4 py-3 text-[12px] font-semibold text-ink pixel-btn disabled:opacity-50"
+          >
+            {loading ? "…" : "Go"}
+          </button>
+          <button
+            type="button"
+            onClick={clearAll}
+            className="min-h-[48px] rounded-none border-2 border-border bg-wood px-4 py-3 text-[11px] font-semibold text-muted pixel-btn hover:border-banana hover:text-banana"
+          >
+            Clear
+          </button>
+        </div>
       </form>
 
       {err && (
@@ -366,7 +410,7 @@ export default function LookupApp({
                 </div>
               )}
             </div>
-            <div className="flex flex-col gap-2 p-4">
+            <div className="flex flex-col gap-2 p-3 sm:p-4">
               <h2 className="text-[14px] text-banana sm:text-[15px]">
                 {primaryHref ? (
                   <Link href={primaryHref} className="hover:underline">
@@ -470,7 +514,7 @@ export default function LookupApp({
         <button
           type="button"
           onClick={() => setMoreOpen((v) => !v)}
-          className="flex w-full items-center justify-between px-3 py-3 text-left text-[10px] text-banana"
+          className="flex min-h-[48px] w-full items-center justify-between px-3 py-3 text-left text-[11px] text-banana"
         >
           <span>More</span>
           <span className="text-muted">{moreOpen ? "−" : "+"}</span>
@@ -529,11 +573,6 @@ export default function LookupApp({
               />
             </div>
 
-            <div>
-              <h3 className="mb-2 text-[10px] text-muted">Donate · $55/yr</h3>
-              <DonatePanel />
-            </div>
-
             <p className="text-[9px] text-muted">
               <Link href="/support" className="text-banana hover:underline">
                 Full support page
@@ -543,7 +582,7 @@ export default function LookupApp({
         )}
       </div>
 
-      <footer className="mt-auto pt-8 text-center text-[9px] leading-relaxed text-muted">
+      <footer className="mt-auto pt-6 text-center text-[10px] leading-relaxed text-muted sm:pt-8 sm:text-[9px]">
         <p>
           Made with 💚{" "}
           <a
@@ -560,7 +599,7 @@ export default function LookupApp({
           <button
             type="button"
             onClick={loadHouse}
-            className="text-banana underline-offset-2 hover:underline"
+            className="min-h-[40px] px-1 text-banana underline-offset-2 hover:underline"
             title={HOUSE_MONKE.name}
           >
             {HOUSE_MONKE.name}

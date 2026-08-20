@@ -37,8 +37,17 @@ function fmtSol(n: number | null | undefined) {
   return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
-/** Link + left slide-over donate drawer */
-export default function DonatePanel() {
+type Props = {
+  /** Show compact header button instead of text link */
+  variant?: "link" | "button";
+  className?: string;
+};
+
+/** Donate trigger + left slide-over drawer */
+export default function DonatePanel({
+  variant = "link",
+  className = "",
+}: Props) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(YEARLY_GOAL_USD);
   const [bal, setBal] = useState<BalResp | null>(null);
@@ -97,9 +106,19 @@ export default function DonatePanel() {
   const progress = bal?.progressPct;
   const remaining = bal?.remainingUsd;
 
-  return (
-    <>
-      <p className="mt-3 text-center text-[10px] leading-relaxed text-muted">
+  const trigger =
+    variant === "button" ? (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={`min-h-[48px] rounded-none border-2 border-banana bg-wood px-4 py-3 text-[11px] font-semibold text-banana pixel-btn hover:bg-banana hover:text-ink ${className}`}
+      >
+        Donate
+      </button>
+    ) : (
+      <p
+        className={`mt-3 text-center text-[10px] leading-relaxed text-muted ${className}`}
+      >
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -109,6 +128,11 @@ export default function DonatePanel() {
         </button>
         {" · "}we need ${YEARLY_GOAL_USD}/yr to keep monke.bar running
       </p>
+    );
+
+  return (
+    <>
+      {trigger}
 
       <div
         className={`fixed inset-0 z-40 bg-black/70 transition-opacity duration-200 ${
@@ -123,11 +147,15 @@ export default function DonatePanel() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="donate-heading"
-        className={`fixed left-0 top-0 z-50 flex h-full w-[min(100%,22rem)] flex-col border-r-2 border-banana bg-wood shadow-[8px_0_0_#000] transition-transform duration-300 ease-out ${
+        className={`fixed left-0 top-0 z-50 flex h-[100dvh] w-[min(100%,22rem)] flex-col border-r-2 border-banana bg-wood shadow-[8px_0_0_#000] transition-transform duration-300 ease-out ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="flex items-center justify-between border-b-2 border-border px-3 py-3">
+        <div
+          className="flex items-center justify-between border-b-2 border-border px-3 py-3"
+          style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+        >
           <h2
             id="donate-heading"
             className="text-[11px] leading-snug text-banana sm:text-[12px]"
@@ -137,21 +165,19 @@ export default function DonatePanel() {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="border-2 border-border bg-card px-3 py-2 text-[10px] text-muted pixel-btn hover:border-banana hover:text-banana"
+            className="min-h-[44px] min-w-[44px] border-2 border-border bg-card px-3 py-2 text-[10px] text-muted pixel-btn hover:border-banana hover:text-banana"
             aria-label="Close donate"
           >
             ✕
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4">
           <p className="text-[10px] leading-relaxed text-muted sm:text-[11px]">
-            We need{" "}
-            <span className="text-banana">${goal} a year</span> to keep the site
-            running — RPC, hosting, indexes.
+            We need <span className="text-banana">${goal} a year</span> to keep
+            the site running — RPC, hosting, indexes.
           </p>
 
-          {/* Wallet balance */}
           <div className="mt-4 border-2 border-border bg-card px-3 py-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[9px] uppercase tracking-wider text-muted">
@@ -160,7 +186,7 @@ export default function DonatePanel() {
               <button
                 type="button"
                 onClick={() => void loadBal()}
-                className="text-[9px] text-banana hover:underline"
+                className="min-h-[36px] text-[9px] text-banana hover:underline"
                 disabled={balLoading}
               >
                 {balLoading ? "…" : "refresh"}
@@ -197,7 +223,6 @@ export default function DonatePanel() {
               </div>
             </div>
 
-            {/* Progress to $55/yr */}
             <div className="mt-3">
               <div className="mb-1 flex justify-between text-[8px] text-muted">
                 <span>Yearly goal ${goal}</span>
@@ -227,7 +252,6 @@ export default function DonatePanel() {
             </div>
           </div>
 
-          {/* Amount slider */}
           <div className="mt-5">
             <div className="flex items-end justify-between gap-2">
               <label
@@ -249,7 +273,7 @@ export default function DonatePanel() {
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
               className="mt-3 w-full accent-[#ffd84d]"
-              style={{ minHeight: 44 }}
+              style={{ minHeight: 48 }}
               aria-valuemin={MIN_DONATE_USD}
               aria-valuemax={MAX_DONATE_USD}
               aria-valuenow={amount}
@@ -279,7 +303,7 @@ export default function DonatePanel() {
 
           <a
             href={payUrl}
-            className="mt-4 inline-flex w-full items-center justify-center border-2 border-black bg-banana px-3 py-3 text-[11px] font-semibold text-ink pixel-btn"
+            className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center border-2 border-black bg-banana px-3 py-3 text-[11px] font-semibold text-ink pixel-btn"
             onClick={() =>
               track("donate_open", { amount, method: "solana_pay_link" })
             }
@@ -288,7 +312,7 @@ export default function DonatePanel() {
           </a>
           <button
             type="button"
-            className="mt-2 w-full border-2 border-border bg-card px-3 py-2 text-[9px] text-banana pixel-btn hover:border-banana"
+            className="mt-2 min-h-[44px] w-full border-2 border-border bg-card px-3 py-2 text-[9px] text-banana pixel-btn hover:border-banana"
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(payUrl);

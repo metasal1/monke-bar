@@ -220,3 +220,12 @@ body {
   background: color-mix(in oklab, var(--banana) 45%, transparent);
   color: var(--ink);
 }
+
+/* hide scrollbars on horizontal tab strip */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
