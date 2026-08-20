@@ -25,7 +25,33 @@ async function rpc<T>(method: string, params: unknown): Promise<T> {
   return json.result as T;
 }
 
+function lamportsFromBalance(result: unknown): number {
+  if (typeof result === "number") return result;
+  if (result && typeof result === "object" && "value" in result) {
+    const v = (result as { value: unknown }).value;
+    if (typeof v === "number") return v;
+  }
+  return 0;
+}
+
 async function solPriceUsd(): Promise<number | null> {
+  // Prefer Jupiter (works from CF); CoinGecko often blocked
+  try {
+    const res = await fetch(
+      "https://lite-api.jup.ag/price/v3?ids=So11111111111111111111111111111111111111112",
+      { next: { revalidate: 60 }, headers: { Accept: "application/json" } }
+    );
+    if (res.ok) {
+      const j = await res.json();
+      const n = Number(
+        j?.["So11111111111111111111111111111111111111112"]?.usdPrice ??
+          j?.data?.["So11111111111111111111111111111111111111112"]?.price
+      );
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  } catch {
+    /* fall through */
+  }
   try {
     const res = await fetch(
       "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
@@ -43,8 +69,8 @@ async function solPriceUsd(): Promise<number | null> {
 export async function GET() {
   const wallet = DONATE_RECIPIENT;
   try {
-    const [balLamports, tokenAccs, price] = await Promise.all([
-      rpc<number>("getBalance", [wallet]),
+    const [balRaw, tokenAccs, price] = await Promise.all([
+      rpc<unknown>("getBalance", [wallet]),
       rpc<{
         value: {
           account: {
@@ -66,7 +92,7 @@ export async function GET() {
       solPriceUsd(),
     ]);
 
-    const sol = (balLamports || 0) / 1e9;
+    const sol = lamportsFromBalance(balRaw) / 1e9;
     let usdc = 0;
     for (const row of tokenAccs?.value || []) {
       const amt = row.account?.data?.parsed?.info?.tokenAmount?.uiAmount;
@@ -75,14 +101,16 @@ export async function GET() {
 
     const solUsd = price != null ? sol * price : null;
     const totalUsd =
-      solUsd != null ? solUsd + usdc : usdc > 0 ? usdc : null;
+      solUsd != null ? solUsd + usdc : usdc > 0 ? usdc : sol === 0 && usdc === 0 ? 0 : null;
     const goal = YEARLY_GOAL_USD;
     const progressPct =
       totalUsd != null && goal > 0
         ? Math.min(100, Math.round((totalUsd / goal) * 1000) / 10)
         : null;
     const remainingUsd =
-      totalUsd != null ? Math.max(0, Math.round((goal - totalUsd) * 100) / 100) : goal;
+      totalUsd != null
+        ? Math.max(0, Math.round((goal - totalUsd) * 100) / 100)
+        : goal;
 
     return NextResponse.json(
       {
