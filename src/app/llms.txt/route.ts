@@ -29,7 +29,7 @@ const BODY = `# monke.bar
 - SNS (Bonfida)
 
 ## Support
-- Donate $1 USDC per monke per year via Solana Pay slider on home
+- Donate: $55/yr goal · runway wallet balance · Solana Pay USDC slider (left drawer)
 
 ## Maker
 - https://metasal.xyz

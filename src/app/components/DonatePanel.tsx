@@ -1,31 +1,79 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   DONATE_RECIPIENT,
-  MAX_MONKES,
-  MIN_MONKES,
-  USD_PER_MONKE,
+  MAX_DONATE_USD,
+  MIN_DONATE_USD,
+  YEARLY_GOAL_USD,
   buildSolanaPayUsdcUrl,
-  usdForMonkes,
+  shortAddr,
 } from "@/lib/donate";
 import { track } from "@/lib/analytics";
 
-function shortAddr(a: string) {
-  return `${a.slice(0, 4)}…${a.slice(-4)}`;
+interface BalResp {
+  wallet: string;
+  sol?: number;
+  usdc?: number;
+  solUsd?: number | null;
+  totalUsd?: number | null;
+  yearlyGoalUsd?: number;
+  progressPct?: number | null;
+  remainingUsd?: number;
+  error?: string;
+}
+
+function fmtUsd(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return `$${n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function fmtSol(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
 /** Link + left slide-over donate drawer */
 export default function DonatePanel() {
   const [open, setOpen] = useState(false);
-  const [monkes, setMonkes] = useState(1);
-  const usd = usdForMonkes(monkes);
-  const payUrl = useMemo(() => buildSolanaPayUsdcUrl({ monkes }), [monkes]);
+  const [amount, setAmount] = useState(YEARLY_GOAL_USD);
+  const [bal, setBal] = useState<BalResp | null>(null);
+  const [balLoading, setBalLoading] = useState(false);
+
+  const payUrl = useMemo(
+    () => buildSolanaPayUsdcUrl({ amountUsd: amount }),
+    [amount]
+  );
+
+  const loadBal = useCallback(async () => {
+    setBalLoading(true);
+    try {
+      const res = await fetch("/api/donate-balance");
+      const json = (await res.json()) as BalResp;
+      setBal(json);
+      if (json.remainingUsd != null && json.remainingUsd > 0) {
+        setAmount(
+          Math.min(
+            MAX_DONATE_USD,
+            Math.max(MIN_DONATE_USD, Math.ceil(json.remainingUsd))
+          )
+        );
+      }
+    } catch {
+      setBal({ wallet: DONATE_RECIPIENT, error: "Could not load balance" });
+    } finally {
+      setBalLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
-    track("donate_open_drawer", { monkes, usd });
+    void loadBal();
+    track("donate_open_drawer", { amount });
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
@@ -36,13 +84,18 @@ export default function DonatePanel() {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, monkes, usd]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, loadBal]);
 
-  // deep link #donate
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.hash === "#donate") setOpen(true);
   }, []);
+
+  const goal = bal?.yearlyGoalUsd ?? YEARLY_GOAL_USD;
+  const totalUsd = bal?.totalUsd;
+  const progress = bal?.progressPct;
+  const remaining = bal?.remainingUsd;
 
   return (
     <>
@@ -54,10 +107,9 @@ export default function DonatePanel() {
         >
           Donate
         </button>
-        {" · "}${USD_PER_MONKE}/monke/yr to keep monke.bar online
+        {" · "}we need ${YEARLY_GOAL_USD}/yr to keep monke.bar running
       </p>
 
-      {/* Backdrop */}
       <div
         className={`fixed inset-0 z-40 bg-black/70 transition-opacity duration-200 ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
@@ -66,7 +118,6 @@ export default function DonatePanel() {
         aria-hidden={!open}
       />
 
-      {/* Left drawer */}
       <aside
         id="donate-drawer"
         role="dialog"
@@ -95,56 +146,119 @@ export default function DonatePanel() {
 
         <div className="flex-1 overflow-y-auto px-3 py-4">
           <p className="text-[10px] leading-relaxed text-muted sm:text-[11px]">
-            monke.bar needs about{" "}
-            <span className="text-banana">
-              ${USD_PER_MONKE} USDC per monke per year
-            </span>{" "}
-            — RPC, hosting, indexes. Slide monkes, scan Solana Pay.
+            We need{" "}
+            <span className="text-banana">${goal} a year</span> to keep the site
+            running — RPC, hosting, indexes.
           </p>
 
+          {/* Wallet balance */}
+          <div className="mt-4 border-2 border-border bg-card px-3 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[9px] uppercase tracking-wider text-muted">
+                Runway wallet
+              </span>
+              <button
+                type="button"
+                onClick={() => void loadBal()}
+                className="text-[9px] text-banana hover:underline"
+                disabled={balLoading}
+              >
+                {balLoading ? "…" : "refresh"}
+              </button>
+            </div>
+            <a
+              href={`https://solscan.io/account/${DONATE_RECIPIENT}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block break-all text-[9px] text-banana hover:underline"
+              title={DONATE_RECIPIENT}
+            >
+              {shortAddr(DONATE_RECIPIENT, 6)}
+            </a>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
+              <div>
+                <div className="text-[8px] text-muted">SOL</div>
+                <div className="text-banana">{fmtSol(bal?.sol)}</div>
+              </div>
+              <div>
+                <div className="text-[8px] text-muted">USDC</div>
+                <div className="text-banana">
+                  {bal?.usdc != null
+                    ? bal.usdc.toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })
+                    : "—"}
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-[8px] text-muted">≈ balance</div>
+                <div className="text-[14px] text-neon">{fmtUsd(totalUsd)}</div>
+              </div>
+            </div>
+
+            {/* Progress to $55/yr */}
+            <div className="mt-3">
+              <div className="mb-1 flex justify-between text-[8px] text-muted">
+                <span>Yearly goal ${goal}</span>
+                <span>{progress != null ? `${progress}%` : "—"}</span>
+              </div>
+              <div className="h-3 border-2 border-black bg-ink">
+                <div
+                  className="h-full bg-banana transition-all"
+                  style={{
+                    width: `${progress != null ? Math.min(100, progress) : 0}%`,
+                  }}
+                />
+              </div>
+              <p className="mt-2 text-[9px] leading-relaxed text-muted">
+                {remaining != null && remaining > 0 ? (
+                  <>
+                    Still need about{" "}
+                    <span className="text-banana">{fmtUsd(remaining)}</span> this
+                    year.
+                  </>
+                ) : totalUsd != null && totalUsd >= goal ? (
+                  <span className="text-neon">Goal covered — thank you.</span>
+                ) : (
+                  <>Target ${goal}/yr to keep monke.bar online.</>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Amount slider */}
           <div className="mt-5">
             <div className="flex items-end justify-between gap-2">
               <label
-                htmlFor="monke-slider"
+                htmlFor="donate-slider"
                 className="text-[10px] text-muted sm:text-[11px]"
               >
-                Monkes
+                Donate (USDC)
               </label>
-              <div className="text-right">
-                <div className="text-[16px] text-banana sm:text-[18px]">
-                  {monkes}
-                </div>
-                <div className="text-[10px] text-neon sm:text-[11px]">
-                  ${usd} USDC
-                </div>
+              <div className="text-[16px] text-banana sm:text-[18px]">
+                ${amount}
               </div>
             </div>
             <input
-              id="monke-slider"
+              id="donate-slider"
               type="range"
-              min={MIN_MONKES}
-              max={MAX_MONKES}
+              min={MIN_DONATE_USD}
+              max={MAX_DONATE_USD}
               step={1}
-              value={monkes}
-              onChange={(e) => setMonkes(Number(e.target.value))}
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
               className="mt-3 w-full accent-[#ffd84d]"
               style={{ minHeight: 44 }}
-              aria-valuemin={MIN_MONKES}
-              aria-valuemax={MAX_MONKES}
-              aria-valuenow={monkes}
-              aria-label="Number of monkes to fund for one year"
+              aria-valuemin={MIN_DONATE_USD}
+              aria-valuemax={MAX_DONATE_USD}
+              aria-valuenow={amount}
+              aria-label="USDC amount to donate"
             />
             <div className="mt-1 flex justify-between text-[8px] text-muted">
-              <span>{MIN_MONKES}</span>
-              <span>{MAX_MONKES}</span>
+              <span>${MIN_DONATE_USD}</span>
+              <span>${MAX_DONATE_USD}</span>
             </div>
-
-            <p className="mt-4 text-[9px] leading-relaxed text-muted sm:text-[10px]">
-              ${USD_PER_MONKE} × {monkes} monke{monkes === 1 ? "" : "s"} ={" "}
-              <span className="text-banana">${usd} USDC / year</span>
-              <br />
-              Pays RPC + CF + keep the pixel lights on.
-            </p>
           </div>
 
           <div className="mt-5 flex flex-col items-center">
@@ -159,7 +273,7 @@ export default function DonatePanel() {
               />
             </div>
             <p className="mt-2 max-w-[200px] text-center text-[9px] leading-relaxed text-muted">
-              Scan · Phantom / Solflare · Solana Pay · ${usd} USDC
+              Scan · Phantom / Solflare · Solana Pay · ${amount} USDC
             </p>
           </div>
 
@@ -167,10 +281,10 @@ export default function DonatePanel() {
             href={payUrl}
             className="mt-4 inline-flex w-full items-center justify-center border-2 border-black bg-banana px-3 py-3 text-[11px] font-semibold text-ink pixel-btn"
             onClick={() =>
-              track("donate_open", { monkes, usd, method: "solana_pay_link" })
+              track("donate_open", { amount, method: "solana_pay_link" })
             }
           >
-            OPEN IN WALLET · ${usd}
+            OPEN IN WALLET · ${amount}
           </a>
           <button
             type="button"
@@ -178,7 +292,7 @@ export default function DonatePanel() {
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(payUrl);
-                track("donate_copy", { monkes, usd });
+                track("donate_copy", { amount });
               } catch {
                 /* ignore */
               }
@@ -187,7 +301,7 @@ export default function DonatePanel() {
             COPY PAY LINK
           </button>
           <p className="mt-3 break-all text-center text-[8px] text-muted">
-            to {shortAddr(DONATE_RECIPIENT)} · USDC
+            to {shortAddr(DONATE_RECIPIENT, 6)} · USDC
           </p>
         </div>
       </aside>

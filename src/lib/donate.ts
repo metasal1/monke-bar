@@ -1,42 +1,43 @@
 /** monke.bar keep-online donations via Solana Pay (USDC) */
 
-/** metasal.sol — primary tip jar */
+/** Runway wallet — show balance + accept tips */
 export const DONATE_RECIPIENT =
   process.env.NEXT_PUBLIC_DONATE_RECIPIENT ||
-  "GaxVqiQyJKQDRu6H4pfy9V6Xq19pHGr6HQKDQDv911Y4";
+  "9Sjoqhs9F2Sstu9tnT2HLu8sCHUmhMMQYXh8xsGNZUcq";
 
 /** Mainnet USDC mint */
 export const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
-export const USD_PER_MONKE = 1;
-export const MIN_MONKES = 1;
-export const MAX_MONKES = 50;
+/** Yearly operating target (USD) */
+export const YEARLY_GOAL_USD = 55;
 
-export function usdForMonkes(n: number): number {
-  const x = Math.min(MAX_MONKES, Math.max(MIN_MONKES, Math.round(n)));
-  return x * USD_PER_MONKE;
-}
+export const MIN_DONATE_USD = 1;
+export const MAX_DONATE_USD = 55;
 
 /**
  * Solana Pay transfer request — $N USDC.
  * Spec: solana:<recipient>?amount=<ui>&spl-token=<mint>&label=&message=&memo=
  */
 export function buildSolanaPayUsdcUrl(opts: {
-  monkes: number;
+  amountUsd: number;
   recipient?: string;
 }): string {
-  const monkes = Math.min(
-    MAX_MONKES,
-    Math.max(MIN_MONKES, Math.round(opts.monkes))
+  const amount = Math.min(
+    MAX_DONATE_USD,
+    Math.max(MIN_DONATE_USD, Math.round(opts.amountUsd * 100) / 100)
   );
-  const amount = usdForMonkes(monkes);
   const recipient = opts.recipient || DONATE_RECIPIENT;
   const params = new URLSearchParams({
     amount: String(amount),
     "spl-token": USDC_MINT,
     label: "monke.bar",
-    message: `Keep monke.bar online · ${monkes} monke${monkes === 1 ? "" : "s"} · $${amount}/yr`,
-    memo: `monke.bar x${monkes}`,
+    message: `Keep monke.bar online · $${amount} toward $${YEARLY_GOAL_USD}/yr`,
+    memo: `monke.bar donate $${amount}`,
   });
   return `solana:${recipient}?${params.toString()}`;
+}
+
+export function shortAddr(a: string, n = 4) {
+  if (!a || a.length < 10) return a;
+  return `${a.slice(0, n)}…${a.slice(-n)}`;
 }
