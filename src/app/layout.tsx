@@ -16,7 +16,7 @@ const SITE = "https://monke.bar";
 
 export const metadata: Metadata = {
   title: {
-    default: "monke.bar — THE MONKE BAR | SMB Gen2 Gen3 Barrel Lookup",
+    default: "monke.bar",
     template: "%s · monke.bar",
   },
   description:

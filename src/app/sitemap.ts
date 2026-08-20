@@ -6,6 +6,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://monke.bar";
   return [
     {
+      url: `${base}/support`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.4,
+    },
+    {
       url: `${base}/`,
       lastModified: now,
       changeFrequency: "hourly",
