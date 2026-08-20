@@ -166,7 +166,7 @@ export async function lookupMonke(
       };
     }
 
-    // Prefer index image immediately; enrich with DAS in parallel-ish
+    // Prefer index image immediately; brief DAS enrich (owner) with timeout
     let monke: NormalizedMonke = {
       mint: rarity.mint,
       name: rarity.name,
@@ -184,7 +184,10 @@ export async function lookupMonke(
     };
 
     try {
-      const live = await getAsset(rarity.mint);
+      const live = await Promise.race([
+        getAsset(rarity.mint),
+        new Promise<null>((r) => setTimeout(() => r(null), 900)),
+      ]);
       if (live) {
         monke = {
           ...live,
