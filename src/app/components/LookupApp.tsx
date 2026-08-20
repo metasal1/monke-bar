@@ -12,6 +12,7 @@ import {
 } from "@/lib/markets";
 import { track } from "@/lib/analytics";
 import DonatePanel from "@/app/components/DonatePanel";
+import ShareButtons from "@/app/components/ShareButtons";
 
 type CollectionId = "smb_gen2" | "smb_gen3" | "smb_barrel" | "all";
 
@@ -422,6 +423,7 @@ export default function LookupApp({
       )}
 
       {primary && (
+        <>
         <article className="pixel-frame overflow-hidden rounded-none border-2 border-banana bg-card">
           <div className="grid gap-0 sm:grid-cols-[240px_1fr]">
             <div className="relative aspect-square bg-ink">
@@ -572,6 +574,10 @@ export default function LookupApp({
             </div>
           </div>
         </article>
+        <div className="mt-4">
+          <ShareButtons title={primary.name} path={primaryHref || undefined} />
+        </div>
+        </>
       )}
 
       {gallery.length > 0 && (
@@ -643,6 +649,9 @@ export default function LookupApp({
             {HOUSE_MONKE.name}
           </Link>
         </p>
+        <div className="mt-4 mb-2">
+          <ShareButtons title={primary?.name} />
+        </div>
         <DonatePanel />
         {deeplinkPath ? (
           <span className="sr-only">path {deeplinkPath}</span>
