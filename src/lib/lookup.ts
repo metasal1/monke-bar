@@ -18,7 +18,7 @@ import {
   indexStats,
   type HowrareItem,
 } from "./howrare";
-import { getMeFloor, type FloorStats } from "./magiceden";
+import type { FloorStats } from "./magiceden";
 import { looksLikeSns, resolveSns } from "./sns";
 
 export type LookupKind = "mint" | "number" | "wallet" | "sns" | "unknown";
@@ -29,6 +29,7 @@ export interface LookupResult {
   monke: NormalizedMonke | null;
   monkes: NormalizedMonke[];
   rarity: HowrareItem | null;
+  /** Always null on hot path — floors load via /api/floor when needed */
   floor: FloorStats | null;
   collectionId: MonkeCollectionId | "all" | null;
   resolvedWallet?: string;
@@ -85,10 +86,7 @@ export async function lookupMonke(
   const query = rawQuery.trim();
   const hint = parseCollectionHint(query);
   const collectionId: MonkeCollectionId | "all" =
-    opts?.collectionId || hint || "smb_gen2";
-
-  const floorCollection: MonkeCollectionId =
-    collectionId === "all" ? "smb_gen2" : collectionId;
+    opts?.collectionId || hint || "smb_gen3";
 
   const stats = collectionId === "all" ? null : indexStats(collectionId);
 
@@ -108,9 +106,7 @@ export async function lookupMonke(
     return { ...base, error: "Empty query" };
   }
 
-  const floorP = getMeFloor(floorCollection);
-
-  // SNS first (toly.sol / name)
+  // SNS
   if (looksLikeSns(query)) {
     let domain: string;
     let owner: string;
@@ -122,7 +118,6 @@ export async function lookupMonke(
       return {
         ...base,
         kind: "sns",
-        floor: await floorP,
         error:
           e instanceof Error
             ? `SNS resolve failed: ${e.message}`
@@ -130,20 +125,18 @@ export async function lookupMonke(
       };
     }
     try {
-      const result = await walletLookup(owner, collectionId, {
+      return await walletLookup(owner, collectionId, {
         ...base,
         kind: "sns",
         resolvedDomain: domain,
         resolvedWallet: owner,
       });
-      return { ...result, floor: await floorP };
     } catch (e) {
       return {
         ...base,
         kind: "sns",
         resolvedDomain: domain,
         resolvedWallet: owner,
-        floor: await floorP,
         error:
           e instanceof Error
             ? `Wallet scan failed: ${e.message}`
@@ -154,10 +147,10 @@ export async function lookupMonke(
 
   const num = parseMonkeNumber(query);
 
-  // Number lookup — needs concrete collection (default Gen2)
+  // Number — index first (fast), DAS for live owner/image
   if (num != null) {
     const cid: MonkeCollectionId =
-      collectionId === "all" ? hint || "smb_gen2" : collectionId;
+      collectionId === "all" ? hint || "smb_gen3" : collectionId;
     const rarity = await howrareByNumber(cid, num);
     if (!rarity?.mint) {
       const st = indexStats(cid);
@@ -165,7 +158,6 @@ export async function lookupMonke(
         ...base,
         kind: "number",
         collectionId: cid,
-        floor: await floorP,
         indexPartial: st.partial,
         indexCount: st.count,
         error: st.partial
@@ -173,33 +165,45 @@ export async function lookupMonke(
           : `No mint found for ${COLLECTIONS[cid].shortName} #${num}`,
       };
     }
-    let monke: NormalizedMonke | null = null;
+
+    // Prefer index image immediately; enrich with DAS in parallel-ish
+    let monke: NormalizedMonke = {
+      mint: rarity.mint,
+      name: rarity.name,
+      number: num,
+      image: rarity.image,
+      owner: null,
+      collectionMint: COLLECTIONS[cid].collectionMint,
+      attributes: rarity.attributes.map((a) => ({
+        trait_type: a.name,
+        value: a.value,
+      })),
+      frozen: false,
+      compressed: false,
+      source: "helius",
+    };
+
     try {
-      monke = await getAsset(rarity.mint);
+      const live = await getAsset(rarity.mint);
+      if (live) {
+        monke = {
+          ...live,
+          number: live.number ?? num,
+          name: live.name || rarity.name,
+          image: live.image || rarity.image,
+        };
+      }
     } catch {
-      monke = {
-        mint: rarity.mint,
-        name: rarity.name,
-        number: num,
-        image: rarity.image,
-        owner: null,
-        collectionMint: COLLECTIONS[cid].collectionMint,
-        attributes: rarity.attributes.map((a) => ({
-          trait_type: a.name,
-          value: a.value,
-        })),
-        frozen: false,
-        compressed: false,
-        source: "helius",
-      };
+      /* keep index-backed monke */
     }
+
     return {
       kind: "number",
       query,
       monke,
-      monkes: monke ? [monke] : [],
+      monkes: [monke],
       rarity,
-      floor: await floorP,
+      floor: null,
       collectionId: cid,
       indexPartial: indexStats(cid).partial,
       indexCount: indexStats(cid).count,
@@ -226,8 +230,7 @@ export async function lookupMonke(
 
     if (asNft && monke && !opts?.preferWallet) {
       const cid =
-        detected ||
-        (collectionId === "all" ? "smb_gen2" : collectionId);
+        detected || (collectionId === "all" ? "smb_gen3" : collectionId);
       const rarity = await attachRarity(monke, cid);
       return {
         kind: "mint",
@@ -235,38 +238,41 @@ export async function lookupMonke(
         monke,
         monkes: [monke],
         rarity,
-        floor: await getMeFloor(cid),
+        floor: null,
         collectionId: detected || cid,
       };
     }
 
-    // Treat as wallet
     try {
-      const result = await walletLookup(query, collectionId, {
+      return await walletLookup(query, collectionId, {
         ...base,
         kind: "wallet",
       });
-      return { ...result, floor: await floorP };
     } catch (e) {
       return {
         ...base,
-        kind: monke ? "mint" : "wallet",
-        monke,
-        monkes: monke ? [monke] : [],
-        floor: await floorP,
+        kind: "wallet",
         error:
-          monke == null
-            ? e instanceof Error
-              ? e.message
-              : "Lookup failed"
-            : undefined,
+          e instanceof Error ? e.message : "Wallet scan failed",
       };
     }
   }
 
-  return {
-    ...base,
-    floor: await floorP,
-    error: "Enter monke #, mint, wallet, or SNS (.sol)",
-  };
+  // bare base58-ish fallthrough as wallet
+  if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(query)) {
+    try {
+      return await walletLookup(query, collectionId, {
+        ...base,
+        kind: "wallet",
+      });
+    } catch (e) {
+      return {
+        ...base,
+        kind: "wallet",
+        error: e instanceof Error ? e.message : "Wallet scan failed",
+      };
+    }
+  }
+
+  return { ...base, error: "Unrecognized query" };
 }

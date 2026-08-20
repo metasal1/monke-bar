@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LookupApp from "./components/LookupApp";
+import { HOUSE_MONKE } from "@/lib/house-monke";
 
 export const metadata: Metadata = {
   title: "monke.bar — SMB lookup",
@@ -9,5 +10,10 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  return <LookupApp />;
+  return (
+    <LookupApp
+      initialCollection="smb_gen3"
+      initialQuery={String(HOUSE_MONKE.number)}
+    />
+  );
 }
